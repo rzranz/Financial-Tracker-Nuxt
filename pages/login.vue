@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lock, Mail, ShieldCheck } from 'lucide-vue-next'
+import { Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-vue-next'
 
 definePageMeta({
   layout: false
@@ -11,7 +11,10 @@ const user = useSupabaseUser()
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
+const resending = ref(false)
 const errorMessage = ref('')
+const needsConfirmation = ref(false)
+const resendMessage = ref('')
 
 watchEffect(() => {
   if (user.value) {
@@ -21,6 +24,8 @@ watchEffect(() => {
 
 async function handleLogin() {
   errorMessage.value = ''
+  resendMessage.value = ''
+  needsConfirmation.value = false
   loading.value = true
   try {
     const { error } = await supabase.auth.signInWithPassword({
@@ -28,12 +33,40 @@ async function handleLogin() {
       password: password.value
     })
     if (error) {
-      errorMessage.value = error.message
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        needsConfirmation.value = true
+        errorMessage.value =
+          'Email Anda belum dikonfirmasi. Cek inbox/spam email Anda untuk klik tautan verifikasi, atau konfirmasi akun di Supabase Dashboard.'
+      } else {
+        errorMessage.value = error.message
+      }
       return
     }
     await navigateTo('/')
   } finally {
     loading.value = false
+  }
+}
+
+async function handleResendConfirmation() {
+  if (!email.value.trim() || resending.value) return
+  resending.value = true
+  resendMessage.value = ''
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.value.trim(),
+      options: {
+        emailRedirectTo: import.meta.client ? `${window.location.origin}/confirm` : undefined
+      }
+    })
+    if (error) {
+      errorMessage.value = error.message
+      return
+    }
+    resendMessage.value = 'Email konfirmasi baru telah dikirim. Periksa kotak masuk atau folder Spam.'
+  } finally {
+    resending.value = false
   }
 }
 </script>
@@ -86,11 +119,28 @@ async function handleLogin() {
           </div>
         </div>
 
-        <p
+        <div
           v-if="errorMessage"
-          class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300"
+          class="space-y-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300"
         >
-          {{ errorMessage }}
+          <p class="leading-relaxed">{{ errorMessage }}</p>
+          <button
+            v-if="needsConfirmation"
+            type="button"
+            :disabled="resending"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-50"
+            @click="handleResendConfirmation"
+          >
+            <RefreshCw class="h-3 w-3" :class="{ 'animate-spin': resending }" />
+            {{ resending ? 'Mengirim ulang...' : 'Kirim Ulang Email Konfirmasi' }}
+          </button>
+        </div>
+
+        <p
+          v-if="resendMessage"
+          class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300"
+        >
+          {{ resendMessage }}
         </p>
 
         <button
