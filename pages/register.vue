@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, Lock, Mail } from 'lucide-vue-next'
+import { ArrowRight, CheckCircle2, Lock, Mail, ShieldCheck } from 'lucide-vue-next'
 
 definePageMeta({
   layout: false
@@ -12,6 +12,7 @@ const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
+const isInteracting = ref(false)
 const errorMessage = ref('')
 const registeredSuccess = ref(false)
 
@@ -57,10 +58,22 @@ async function handleRegister() {
 </script>
 
 <template>
-  <div class="flex min-h-[100dvh] items-center justify-center bg-vault-bg px-4 py-12">
-    <div class="w-full max-w-md rounded-2xl border border-vault-border bg-vault-surface p-7 shadow-2xl">
+  <div class="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-vault-bg px-4 py-12">
+    <VaultBackdrop :focused="isInteracting" />
+
+    <div
+      class="relative z-10 w-full max-w-md rounded-2xl border border-vault-border bg-vault-surface/90 p-7 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+      :class="isInteracting ? 'border-emerald-500/35 shadow-[0_24px_60px_-25px_rgba(16,185,129,0.25)]' : ''"
+      @mouseenter="isInteracting = true"
+      @mouseleave="isInteracting = false"
+    >
       <div class="flex items-center gap-3">
-        <VaultOrbMotion size="sm" />
+        <div
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          :class="isInteracting ? 'scale-105' : ''"
+        >
+          <ShieldCheck class="h-5 w-5" />
+        </div>
         <div>
           <h1 class="text-lg font-bold text-white">Buat Akun FinVault</h1>
           <p class="text-xs text-slate-400">Terisolasi total dengan Supabase Row Level Security</p>
@@ -82,7 +95,13 @@ async function handleRegister() {
         </div>
       </div>
 
-      <form v-else class="mt-6 space-y-4" @submit.prevent="handleRegister">
+      <form
+        v-else
+        class="mt-6 space-y-4"
+        @focusin="isInteracting = true"
+        @focusout="isInteracting = false"
+        @submit.prevent="handleRegister"
+      >
         <div class="space-y-1.5">
           <label for="reg-email" class="block text-xs font-medium text-slate-300">Email</label>
           <div class="relative">
@@ -94,7 +113,7 @@ async function handleRegister() {
               required
               autocomplete="email"
               placeholder="nama@email.com"
-              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 transition focus:border-emerald-500 focus:outline-none"
             />
           </div>
         </div>
@@ -111,7 +130,7 @@ async function handleRegister() {
               minlength="6"
               autocomplete="new-password"
               placeholder="Minimal 6 karakter"
-              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 transition focus:border-emerald-500 focus:outline-none"
             />
           </div>
         </div>
@@ -130,7 +149,7 @@ async function handleRegister() {
               minlength="6"
               autocomplete="new-password"
               placeholder="Ulangi password"
-              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              class="w-full rounded-xl border border-vault-border bg-vault-card py-2.5 pl-10 pr-3.5 text-sm text-white placeholder-slate-500 transition focus:border-emerald-500 focus:outline-none"
             />
           </div>
         </div>
@@ -145,9 +164,13 @@ async function handleRegister() {
         <button
           type="submit"
           :disabled="loading"
-          class="w-full rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.99] disabled:opacity-50"
+          class="group flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-slate-950 transition duration-200 hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50"
         >
-          {{ loading ? 'Mendaftarkan...' : 'Buat Akun' }}
+          <span>{{ loading ? 'Mendaftarkan...' : 'Buat Akun' }}</span>
+          <ArrowRight
+            v-if="!loading"
+            class="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1"
+          />
         </button>
       </form>
 

@@ -64,7 +64,7 @@ async function handleSyncMaturity() {
         <button
           type="button"
           :disabled="syncing || loading"
-          class="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-xl border border-vault-border bg-vault-card px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white disabled:opacity-50 sm:col-span-1"
+          class="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-xl border border-vault-border bg-vault-card px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white active:scale-[0.98] disabled:opacity-50 sm:col-span-1"
           @click="handleSyncMaturity"
         >
           <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': syncing }" />
@@ -72,30 +72,38 @@ async function handleSyncMaturity() {
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20"
+          class="group inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 active:scale-[0.98]"
           @click="showInvModal = true"
         >
-          <Landmark class="h-3.5 w-3.5" />
+          <Landmark class="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110" />
           Kontrak Baru
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98]"
+          class="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98]"
           @click="showTxModal = true"
         >
-          <Plus class="h-3.5 w-3.5" />
+          <span class="flex h-4 w-4 items-center justify-center rounded-full bg-slate-950/15 transition-transform duration-300 group-hover:rotate-90">
+            <Plus class="h-3 w-3" />
+          </span>
           Catat Kas
         </button>
       </div>
     </header>
 
-    <!-- Matured Alert Banner -->
+    <!-- Matured Alert Banner with Out-Shape Pulse Ring -->
     <div
       v-if="maturedContracts.length > 0"
       class="flex flex-col justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:flex-row sm:items-center"
     >
       <div class="flex min-w-0 items-start gap-3">
-        <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+        <div class="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+          <span
+            aria-hidden="true"
+            class="vault-ping-ring absolute inset-0 rounded-full bg-amber-400/60"
+          />
+          <AlertTriangle class="relative h-5 w-5 text-amber-400" />
+        </div>
         <div class="min-w-0">
           <p class="text-sm font-semibold text-amber-200">
             {{ maturedContracts.length }} Kontrak Investasi Telah Jatuh Tempo
@@ -107,11 +115,11 @@ async function handleSyncMaturity() {
       </div>
       <button
         type="button"
-        class="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-amber-300 sm:w-auto sm:max-w-[240px]"
+        class="group inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-amber-300 active:scale-[0.98] sm:w-auto sm:max-w-[240px]"
         @click="claimingContract = maturedContracts[0]"
       >
         <span class="truncate">Cairkan {{ maturedContracts[0].title }}</span>
-        <ArrowRight class="h-3.5 w-3.5 shrink-0" />
+        <ArrowRight class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
       </button>
     </div>
 
@@ -132,10 +140,10 @@ async function handleSyncMaturity() {
             </div>
             <NuxtLink
               to="/investments"
-              class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300"
+              class="group inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300"
             >
               Kelola Semua
-              <ArrowRight class="h-3.5 w-3.5" />
+              <ArrowRight class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
             </NuxtLink>
           </div>
 
@@ -154,7 +162,7 @@ async function handleSyncMaturity() {
             </p>
             <button
               type="button"
-              class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400"
+              class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-amber-400 active:scale-[0.98]"
               @click="showInvModal = true"
             >
               <Plus class="h-3.5 w-3.5" />
@@ -166,11 +174,19 @@ async function handleSyncMaturity() {
             <div
               v-for="inv in activeAndMatured"
               :key="inv.id"
-              class="rounded-xl border border-vault-border bg-vault-bg/70 p-4 transition hover:border-slate-700"
+              class="vault-card-interactive rounded-xl border border-vault-border bg-vault-bg/70 p-4"
             >
               <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-2">
+                    <span
+                      v-if="inv.status === 'matured'"
+                      class="relative inline-flex h-2 w-2 shrink-0"
+                      aria-hidden="true"
+                    >
+                      <span class="vault-ping-ring absolute inset-0 rounded-full bg-amber-400" />
+                      <span class="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+                    </span>
                     <h3 class="truncate text-sm font-semibold text-white">{{ inv.title }}</h3>
                     <span
                       class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
@@ -208,7 +224,7 @@ async function handleSyncMaturity() {
                 <button
                   v-if="inv.status === 'matured'"
                   type="button"
-                  class="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 sm:w-auto"
+                  class="w-full rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98] sm:w-auto"
                   @click="claimingContract = inv"
                 >
                   Cairkan / Claim
@@ -231,10 +247,10 @@ async function handleSyncMaturity() {
             </div>
             <NuxtLink
               to="/ledger"
-              class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300"
+              class="group inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300"
             >
               Lihat Ledger
-              <ArrowRight class="h-3.5 w-3.5" />
+              <ArrowRight class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
             </NuxtLink>
           </div>
 
@@ -252,7 +268,7 @@ async function handleSyncMaturity() {
             </p>
             <button
               type="button"
-              class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-emerald-400"
+              class="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98]"
               @click="showTxModal = true"
             >
               <Plus class="h-3.5 w-3.5" />
@@ -264,11 +280,11 @@ async function handleSyncMaturity() {
             <li
               v-for="tx in recentTransactions"
               :key="tx.id"
-              class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              class="group flex items-center justify-between gap-3 rounded-lg px-1 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-vault-elevated/30"
             >
               <div class="flex min-w-0 items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-105"
                   :class="getTransactionPresentation(tx.type).badgeClass"
                 >
                   <ArrowDownLeft

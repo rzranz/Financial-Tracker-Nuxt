@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Decimal from 'decimal.js'
-import { CheckCircle2, Clock, Landmark, Plus, RefreshCw } from 'lucide-vue-next'
+import { ArrowRight, CheckCircle2, Clock, Landmark, Plus, RefreshCw } from 'lucide-vue-next'
 import type { InvestmentRecord, InvestmentStatus } from '~/types/database'
 import { daysUntilMaturity, formatDateID, formatIDR, toDecimal } from '~/utils/finance'
 import { getInvestmentStatusPresentation } from '~/utils/presenters'
@@ -71,7 +71,7 @@ async function handleSyncMaturity() {
         <button
           type="button"
           :disabled="syncing || loading"
-          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-vault-border bg-vault-card px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:text-white disabled:opacity-50"
+          class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-vault-border bg-vault-card px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white active:scale-[0.98] disabled:opacity-50"
           @click="handleSyncMaturity"
         >
           <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': syncing }" />
@@ -79,10 +79,10 @@ async function handleSyncMaturity() {
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-amber-400 lg:hidden"
+          class="group inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-amber-400 active:scale-[0.98] lg:hidden"
           @click="showMobileModal = true"
         >
-          <Plus class="h-4 w-4" />
+          <Plus class="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
           Kontrak Baru
         </button>
       </div>
@@ -90,19 +90,19 @@ async function handleSyncMaturity() {
 
     <!-- Investment KPIs -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <div class="rounded-2xl border border-vault-border bg-vault-card p-5">
+      <div class="vault-card-interactive rounded-2xl border border-vault-border bg-vault-card p-5">
         <p class="text-xs text-slate-400">Locked Principal (Active + Matured)</p>
         <p class="mt-2 break-words font-mono text-xl font-bold text-amber-300 tabular-nums sm:text-2xl">
           {{ formatIDR(summary.lockedPrincipal) }}
         </p>
       </div>
-      <div class="rounded-2xl border border-vault-border bg-vault-card p-5">
+      <div class="vault-card-interactive rounded-2xl border border-vault-border bg-vault-card p-5">
         <p class="text-xs text-slate-400">Projected Profit (Active)</p>
         <p class="mt-2 break-words font-mono text-xl font-bold text-sky-300 tabular-nums sm:text-2xl">
           +{{ formatIDR(summary.projectedProfit) }}
         </p>
       </div>
-      <div class="rounded-2xl border border-vault-border bg-vault-card p-5">
+      <div class="vault-card-interactive rounded-2xl border border-vault-border bg-vault-card p-5">
         <p class="text-xs text-slate-400">Profit Siap Dicairkan (Matured)</p>
         <p class="mt-2 break-words font-mono text-xl font-bold text-emerald-400 tabular-nums sm:text-2xl">
           +{{ formatIDR(summary.maturedProfit) }}
@@ -113,21 +113,8 @@ async function handleSyncMaturity() {
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
       <!-- Contract List -->
       <div class="space-y-4 lg:col-span-7">
-        <div class="flex flex-wrap gap-1.5 rounded-2xl border border-vault-border bg-vault-card p-3">
-          <button
-            v-for="tab in filterTabs"
-            :key="tab.key"
-            type="button"
-            class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition"
-            :class="
-              activeFilter === tab.key
-                ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
-                : 'border-vault-border bg-vault-bg text-slate-400 hover:text-slate-200'
-            "
-            @click="activeFilter = tab.key"
-          >
-            {{ tab.label }}
-          </button>
+        <div class="rounded-2xl border border-vault-border bg-vault-card p-3">
+          <SegmentedTabs v-model="activeFilter" :items="filterTabs" tone="amber" />
         </div>
 
         <div v-if="loading && !initialized" class="space-y-3">
@@ -157,11 +144,19 @@ async function handleSyncMaturity() {
           <article
             v-for="inv in filteredInvestments"
             :key="inv.id"
-            class="rounded-2xl border border-vault-border bg-vault-card p-5 transition hover:border-slate-700"
+            class="vault-card-interactive rounded-2xl border border-vault-border bg-vault-card p-5"
           >
             <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    v-if="inv.status === 'matured'"
+                    class="relative inline-flex h-2.5 w-2.5 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <span class="vault-ping-ring absolute inset-0 rounded-full bg-amber-400" />
+                    <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  </span>
                   <h3 class="truncate text-base font-bold text-white">{{ inv.title }}</h3>
                   <span
                     class="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
@@ -226,7 +221,7 @@ async function handleSyncMaturity() {
               </div>
               <div class="h-2 w-full overflow-hidden rounded-full bg-slate-900">
                 <div
-                  class="h-full rounded-full transition-all duration-500"
+                  class="h-full rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
                   :class="getInvestmentStatusPresentation(inv.status).barClass"
                   :style="{ width: `${progressPercent(inv)}%` }"
                 />
@@ -236,10 +231,11 @@ async function handleSyncMaturity() {
             <div v-if="inv.status === 'matured'" class="mt-4 flex justify-end">
               <button
                 type="button"
-                class="w-full rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98] sm:w-auto"
+                class="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98] sm:w-auto"
                 @click="claimingContract = inv"
               >
-                Cairkan / Claim ke Kas Likuid
+                <span>Cairkan / Claim ke Kas Likuid</span>
+                <ArrowRight class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </div>
           </article>

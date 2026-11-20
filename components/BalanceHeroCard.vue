@@ -9,6 +9,23 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
+const spotlight = ref({ x: 50, y: 30, active: false })
+
+function handlePointerMove(event: MouseEvent) {
+  const el = event.currentTarget as HTMLElement | null
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  spotlight.value = {
+    x: ((event.clientX - rect.left) / rect.width) * 100,
+    y: ((event.clientY - rect.top) / rect.height) * 100,
+    active: true
+  }
+}
+
+function handlePointerLeave() {
+  spotlight.value.active = false
+}
+
 const allocation = computed(() => {
   const liquid = Decimal.max(toDecimal(props.summary.liquidCash), 0)
   const locked = Decimal.max(toDecimal(props.summary.lockedPrincipal), 0)
@@ -30,19 +47,37 @@ const allocation = computed(() => {
 <template>
   <section class="space-y-4">
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-      <!-- Primary Liquid Cash Reality Card -->
+      <!-- Primary Liquid Cash Reality Card with Interactive Background Spotlight & Shape-Emerge -->
       <div
-        class="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-vault-card via-vault-card to-emerald-950/30 p-5 sm:p-6 xl:col-span-5"
+        class="group relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-vault-card via-vault-card to-emerald-950/30 p-5 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-emerald-400/45 sm:p-6 xl:col-span-5"
+        @mousemove="handlePointerMove"
+        @mouseleave="handlePointerLeave"
       >
-        <div class="pointer-events-none absolute -right-2 top-3 opacity-35 sm:right-2 sm:top-4 sm:opacity-45">
-          <VaultOrbMotion size="lg" />
-        </div>
+        <!-- Pointer-reactive radial shape emerging inside card background -->
+        <div
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 transition-opacity duration-500"
+          :class="spotlight.active ? 'opacity-100' : 'opacity-0'"
+          :style="{
+            background: `radial-gradient(320px circle at ${spotlight.x}% ${spotlight.y}%, rgba(16, 185, 129, 0.14), transparent 70%)`
+          }"
+        />
+
+        <!-- Architectural concentric shape emerging from corner on hover -->
+        <div
+          aria-hidden="true"
+          class="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full border border-emerald-400/15 bg-emerald-500/[0.04] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-125"
+        />
+        <div
+          aria-hidden="true"
+          class="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full border border-emerald-400/20 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110"
+        />
 
         <div class="relative z-10 flex items-center justify-between gap-2">
           <span
             class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-300"
           >
-            <Wallet class="h-3.5 w-3.5 shrink-0" />
+            <Wallet class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
             Kas Likuid (Uang Riil)
           </span>
           <span class="font-mono text-[11px] text-slate-400">C_l</span>
@@ -84,13 +119,19 @@ const allocation = computed(() => {
       <!-- Secondary 3 Metrics: Locked Principal, Projected Profit, Total Projected Net Worth -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-7">
         <!-- Locked Principal -->
-        <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
-          <div>
+        <div
+          class="vault-card-interactive group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-vault-border bg-vault-card p-5"
+        >
+          <div
+            aria-hidden="true"
+            class="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-amber-500/[0.06] blur-xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-150"
+          />
+          <div class="relative z-10">
             <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300"
               >
-                <Lock class="h-3 w-3 shrink-0" />
+                <Lock class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:-rotate-6" />
                 Locked Principal
               </span>
               <span class="font-mono text-[11px] text-slate-500">P_l</span>
@@ -103,19 +144,25 @@ const allocation = computed(() => {
               {{ formatIDR(summary.lockedPrincipal) }}
             </p>
           </div>
-          <p class="mt-4 text-xs text-slate-400">
+          <p class="relative z-10 mt-4 text-xs text-slate-400">
             {{ summary.activeCount }} aktif · {{ summary.maturedCount }} siap cair
           </p>
         </div>
 
         <!-- Projected Profit -->
-        <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
-          <div>
+        <div
+          class="vault-card-interactive group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-vault-border bg-vault-card p-5"
+        >
+          <div
+            aria-hidden="true"
+            class="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-sky-500/[0.06] blur-xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-150"
+          />
+          <div class="relative z-10">
             <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300"
               >
-                <TrendingUp class="h-3 w-3 shrink-0" />
+                <TrendingUp class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 Projected Profit
               </span>
               <span class="font-mono text-[11px] text-slate-500">R_p</span>
@@ -128,19 +175,25 @@ const allocation = computed(() => {
               +{{ formatIDR(summary.projectedProfit) }}
             </p>
           </div>
-          <p class="mt-4 text-xs text-slate-400">
+          <p class="relative z-10 mt-4 text-xs text-slate-400">
             Estimasi ROI kontrak aktif (belum cair)
           </p>
         </div>
 
         <!-- Projected Net Worth -->
-        <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
-          <div>
+        <div
+          class="vault-card-interactive group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-vault-border bg-vault-card p-5"
+        >
+          <div
+            aria-hidden="true"
+            class="pointer-events-none absolute -bottom-10 -right-10 h-28 w-28 rounded-full bg-emerald-500/[0.06] blur-xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-150"
+          />
+          <div class="relative z-10">
             <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-slate-600/40 bg-slate-800 px-2.5 py-0.5 text-[11px] font-semibold text-slate-200"
               >
-                <Sparkles class="h-3 w-3 shrink-0 text-amber-400" />
+                <Sparkles class="h-3 w-3 shrink-0 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                 Projected Net Worth
               </span>
               <span class="font-mono text-[11px] text-slate-500">N_p</span>
@@ -153,7 +206,7 @@ const allocation = computed(() => {
               {{ formatIDR(summary.projectedNetWorth) }}
             </p>
           </div>
-          <p class="mt-4 text-xs text-slate-400">
+          <p class="relative z-10 mt-4 text-xs text-slate-400">
             Gabungan C_l + P_l + R_p
           </p>
         </div>
@@ -181,15 +234,15 @@ const allocation = computed(() => {
       </div>
       <div class="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-900">
         <div
-          class="bg-emerald-500 transition-all duration-500"
+          class="bg-emerald-500 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
           :style="{ width: `${allocation.liquidPct}%` }"
         />
         <div
-          class="bg-amber-500 transition-all duration-500"
+          class="bg-amber-500 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
           :style="{ width: `${allocation.lockedPct}%` }"
         />
         <div
-          class="bg-sky-400 transition-all duration-500"
+          class="bg-sky-400 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
           :style="{ width: `${allocation.profitPct}%` }"
         />
       </div>

@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
         @click.self="emit('close')"
       >
         <div
-          class="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-vault-border bg-vault-surface p-5 shadow-2xl sm:rounded-2xl sm:p-6"
+          class="modal-panel-emerge max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-vault-border bg-vault-surface p-5 shadow-2xl sm:rounded-2xl sm:p-6"
           :class="maxWidthClass"
         >
           <div class="flex items-start justify-between gap-3 border-b border-vault-border pb-4">
@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
             </div>
             <button
               type="button"
-              class="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              class="shrink-0 rounded-lg p-1.5 text-slate-400 transition duration-200 hover:rotate-90 hover:bg-slate-800 hover:text-white active:scale-95"
               aria-label="Tutup modal"
               @click="emit('close')"
             >
@@ -82,3 +82,26 @@ onBeforeUnmount(() => {
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.modal-panel-emerge {
+  animation: modal-shape-emerge 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes modal-shape-emerge {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel-emerge {
+    animation: none;
+  }
+}
+</style>
