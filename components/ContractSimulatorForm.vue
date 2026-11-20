@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Decimal from 'decimal.js'
 import { Calculator, CalendarClock, Sparkles } from 'lucide-vue-next'
+import { extractApiErrorMessage } from '~/utils/errors'
 import {
   addDaysUTC,
   computeAnnualizedYieldPct,
@@ -102,10 +103,7 @@ async function handleSubmit() {
     title.value = ''
     emit('created')
   } catch (err: unknown) {
-    errorMessage.value =
-      (err as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
-      (err as { statusMessage?: string })?.statusMessage ||
-      'Gagal membuat kontrak investasi'
+    errorMessage.value = extractApiErrorMessage(err, 'Gagal membuat kontrak investasi')
   } finally {
     submitting.value = false
   }
@@ -123,7 +121,7 @@ async function handleSubmit() {
         class="inline-flex items-center gap-1 rounded-lg border border-vault-border bg-vault-bg px-2.5 py-1 text-[11px] font-medium text-slate-300 transition hover:border-amber-500/40 hover:text-amber-300"
         @click="applyPreset(preset)"
       >
-        <Sparkles class="h-3 w-3 text-amber-400" />
+        <Sparkles class="h-3 w-3 shrink-0 text-amber-400" />
         {{ preset.label }}
       </button>
     </div>
@@ -209,45 +207,47 @@ async function handleSubmit() {
       <input
         v-model="deductFromCash"
         type="checkbox"
-        class="mt-0.5 h-4 w-4 rounded border-slate-600 bg-vault-card text-emerald-500 focus:ring-emerald-500"
+        class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-600 bg-vault-card text-emerald-500 focus:ring-emerald-500"
       />
-      <div class="text-xs">
+      <div class="min-w-0 text-xs">
         <p class="font-semibold text-slate-200">Potong modal dari Kas Likuid sekarang</p>
-        <p class="mt-0.5 text-slate-400">
+        <p class="mt-0.5 leading-relaxed text-slate-400">
           Mencatat mutasi <span class="font-mono text-amber-300">investment_out</span> secara atomik.
           Saldo tersedia:
-          <span class="font-mono font-semibold text-emerald-400">{{ formatIDR(summary.liquidCash) }}</span>
+          <span class="font-mono font-semibold text-emerald-400 tabular-nums">
+            {{ formatIDR(summary.liquidCash) }}
+          </span>
         </p>
       </div>
     </label>
 
     <!-- Live Yield Simulator Preview -->
     <div class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
-      <div class="flex items-center justify-between text-xs">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span class="inline-flex items-center gap-1.5 font-semibold text-amber-300">
-          <Calculator class="h-3.5 w-3.5" />
+          <Calculator class="h-3.5 w-3.5 shrink-0" />
           Simulasi Output Kontrak (DB Precision)
         </span>
         <span class="font-mono text-[11px] text-slate-400">~{{ simulation.apr }}% APR</span>
       </div>
 
-      <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
+      <div class="mt-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
         <div>
           <p class="text-slate-400">Proyeksi Profit</p>
-          <p class="mt-0.5 font-mono text-sm font-bold text-sky-300 tabular-nums">
+          <p class="mt-0.5 break-words font-mono text-sm font-bold text-sky-300 tabular-nums">
             +{{ formatIDR(simulation.profit, true) }}
           </p>
         </div>
         <div>
           <p class="text-slate-400">Total Saat Cair</p>
-          <p class="mt-0.5 font-mono text-sm font-bold text-white tabular-nums">
+          <p class="mt-0.5 break-words font-mono text-sm font-bold text-white tabular-nums">
             {{ formatIDR(simulation.totalMaturity, true) }}
           </p>
         </div>
       </div>
 
-      <div class="mt-3 flex items-center gap-1.5 border-t border-white/10 pt-2.5 text-xs text-slate-300">
-        <CalendarClock class="h-3.5 w-3.5 text-amber-400" />
+      <div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-2.5 text-xs text-slate-300">
+        <CalendarClock class="h-3.5 w-3.5 shrink-0 text-amber-400" />
         <span>Jatuh tempo otomatis pada:</span>
         <span class="font-mono font-semibold text-white">{{ formatDateID(simulation.maturityDate) }}</span>
       </div>

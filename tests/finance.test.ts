@@ -12,6 +12,8 @@ import {
   createInvestmentSchema,
   createTransactionSchema
 } from '~/server/utils/validation'
+import { extractApiErrorMessage } from '~/utils/errors'
+import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
 
 describe('FinVault Financial Mathematical Model (PRD 1.5)', () => {
   it('eliminates floating point drift in decimal additions and subtractions', () => {
@@ -130,5 +132,24 @@ describe('FinVault Input Validation Schemas', () => {
         investmentId: 'not-a-uuid'
       }).success
     ).toBe(false)
+  })
+})
+
+describe('Shared Presenters & Error Extraction', () => {
+  it('maps transaction types and investment statuses uniformly', () => {
+    expect(getTransactionPresentation('income')).toMatchObject({ sign: '+', isInflow: true })
+    expect(getTransactionPresentation('investment_in')).toMatchObject({ sign: '+', isInflow: true })
+    expect(getTransactionPresentation('investment_out')).toMatchObject({ sign: '-', isInflow: false })
+    expect(getTransactionPresentation('expense')).toMatchObject({ sign: '-', isInflow: false })
+
+    expect(getInvestmentStatusPresentation('active').label).toBe('Aktif')
+    expect(getInvestmentStatusPresentation('matured').label).toBe('Siap Cair')
+    expect(getInvestmentStatusPresentation('claimed').label).toBe('Claimed')
+  })
+
+  it('extracts error messages cleanly with fallback', () => {
+    expect(extractApiErrorMessage({ data: { statusMessage: 'Conflict' } }, 'Fallback')).toBe('Conflict')
+    expect(extractApiErrorMessage({ statusMessage: 'Server Error' }, 'Fallback')).toBe('Server Error')
+    expect(extractApiErrorMessage(null, 'Fallback')).toBe('Fallback')
   })
 })

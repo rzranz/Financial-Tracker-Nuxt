@@ -4,8 +4,9 @@ import type {
   NotificationRecord,
   TransactionRecord
 } from '~/types/database'
+import { extractApiErrorMessage } from '~/utils/errors'
 
-const EMPTY_SUMMARY: FinancialSummary = {
+const createEmptySummary = (): FinancialSummary => ({
   liquidCash: '0.00',
   lockedPrincipal: '0.00',
   projectedProfit: '0.00',
@@ -19,16 +20,24 @@ const EMPTY_SUMMARY: FinancialSummary = {
   maturedCount: 0,
   claimedCount: 0,
   unreadNotifications: 0
-}
+})
 
 export function useFinVault() {
-  const summary = useState<FinancialSummary>('finvault-summary', () => ({ ...EMPTY_SUMMARY }))
+  const summary = useState<FinancialSummary>('finvault-summary', createEmptySummary)
   const transactions = useState<TransactionRecord[]>('finvault-transactions', () => [])
   const investments = useState<InvestmentRecord[]>('finvault-investments', () => [])
   const notifications = useState<NotificationRecord[]>('finvault-notifications', () => [])
   const loading = useState<boolean>('finvault-loading', () => false)
   const initialized = useState<boolean>('finvault-initialized', () => false)
   const { pushToast } = useToast()
+
+  function resetState() {
+    summary.value = createEmptySummary()
+    transactions.value = []
+    investments.value = []
+    notifications.value = []
+    initialized.value = false
+  }
 
   async function refreshAll() {
     loading.value = true
@@ -45,13 +54,9 @@ export function useFinVault() {
       notifications.value = notifData
       initialized.value = true
     } catch (err: unknown) {
-      const msg =
-        (err as { data?: { statusMessage?: string }; statusMessage?: string })?.data?.statusMessage ||
-        (err as { statusMessage?: string })?.statusMessage ||
-        'Gagal memuat data keuangan'
       pushToast({
         title: 'Sinkronisasi Gagal',
-        description: msg,
+        description: extractApiErrorMessage(err, 'Gagal memuat data keuangan'),
         variant: 'error'
       })
     } finally {
@@ -172,6 +177,7 @@ export function useFinVault() {
     notifications,
     loading,
     initialized,
+    resetState,
     refreshAll,
     createTransaction,
     deleteTransaction,

@@ -2,6 +2,7 @@
 import { ArrowDownLeft, ArrowUpRight, Plus, Search, Trash2 } from 'lucide-vue-next'
 import type { TransactionType } from '~/types/database'
 import { formatDateID, formatIDR } from '~/utils/finance'
+import { getTransactionPresentation } from '~/utils/presenters'
 
 const { summary, transactions, loading, initialized, refreshAll, deleteTransaction } = useFinVault()
 
@@ -45,33 +46,20 @@ async function handleDelete(id: string) {
     deletingId.value = null
   }
 }
-
-function badgeMeta(type: TransactionType) {
-  switch (type) {
-    case 'income':
-      return { label: 'Income', cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300', sign: '+' }
-    case 'investment_in':
-      return { label: 'Investment In', cls: 'border-sky-500/30 bg-sky-500/10 text-sky-300', sign: '+' }
-    case 'investment_out':
-      return { label: 'Investment Out', cls: 'border-amber-500/30 bg-amber-500/10 text-amber-300', sign: '-' }
-    default:
-      return { label: 'Expense', cls: 'border-rose-500/30 bg-rose-500/10 text-rose-300', sign: '-' }
-  }
-}
 </script>
 
 <template>
   <div class="space-y-6">
     <header class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-white">Cash Ledger</h1>
-        <p class="mt-1 text-sm text-slate-400">
+        <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Cash Ledger</h1>
+        <p class="mt-1 text-xs text-slate-400 sm:text-sm">
           Buku besar arus kas riil — seluruh mutasi langsung memperbarui Liquid Cash Balance.
         </p>
       </div>
       <button
         type="button"
-        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98]"
+        class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.98] sm:w-auto"
         @click="showTxModal = true"
       >
         <Plus class="h-4 w-4" />
@@ -80,28 +68,28 @@ function badgeMeta(type: TransactionType) {
     </header>
 
     <!-- Summary Strip -->
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl border border-vault-border bg-vault-card p-4">
         <p class="text-xs text-slate-400">Kas Likuid Saat Ini</p>
-        <p class="mt-1.5 font-mono text-lg font-bold text-emerald-400 tabular-nums">
+        <p class="mt-1.5 break-words font-mono text-lg font-bold text-emerald-400 tabular-nums">
           {{ formatIDR(summary.liquidCash) }}
         </p>
       </div>
       <div class="rounded-2xl border border-vault-border bg-vault-card p-4">
         <p class="text-xs text-slate-400">Total Income</p>
-        <p class="mt-1.5 font-mono text-lg font-bold text-white tabular-nums">
+        <p class="mt-1.5 break-words font-mono text-lg font-bold text-white tabular-nums">
           +{{ formatIDR(summary.totalIncome) }}
         </p>
       </div>
       <div class="rounded-2xl border border-vault-border bg-vault-card p-4">
         <p class="text-xs text-slate-400">Total Settlement In</p>
-        <p class="mt-1.5 font-mono text-lg font-bold text-sky-300 tabular-nums">
+        <p class="mt-1.5 break-words font-mono text-lg font-bold text-sky-300 tabular-nums">
           +{{ formatIDR(summary.totalInvestmentIn) }}
         </p>
       </div>
       <div class="rounded-2xl border border-vault-border bg-vault-card p-4">
         <p class="text-xs text-slate-400">Total Expense</p>
-        <p class="mt-1.5 font-mono text-lg font-bold text-rose-400 tabular-nums">
+        <p class="mt-1.5 break-words font-mono text-lg font-bold text-rose-400 tabular-nums">
           -{{ formatIDR(summary.totalExpense) }}
         </p>
       </div>
@@ -137,7 +125,7 @@ function badgeMeta(type: TransactionType) {
       </div>
     </div>
 
-    <!-- Ledger Table -->
+    <!-- Ledger Responsive List (Cards on Mobile, Table on md+) -->
     <div class="overflow-hidden rounded-2xl border border-vault-border bg-vault-card">
       <div v-if="loading && !initialized" class="space-y-3 p-5">
         <div v-for="i in 6" :key="i" class="h-12 animate-pulse rounded-xl bg-slate-900" />
@@ -150,68 +138,119 @@ function badgeMeta(type: TransactionType) {
         </p>
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="border-b border-vault-border bg-vault-surface text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            <tr>
-              <th class="px-5 py-3.5">Tanggal</th>
-              <th class="px-5 py-3.5">Tipe</th>
-              <th class="px-5 py-3.5">Kategori &amp; Catatan</th>
-              <th class="px-5 py-3.5 text-right">Nominal (IDR)</th>
-              <th class="px-5 py-3.5 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-vault-border">
-            <tr
-              v-for="tx in filteredTransactions"
-              :key="tx.id"
-              class="transition hover:bg-vault-elevated/40"
-            >
-              <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-300">
-                {{ formatDateID(tx.transaction_date) }}
-              </td>
-              <td class="whitespace-nowrap px-5 py-3.5">
-                <span
-                  class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
-                  :class="badgeMeta(tx.type).cls"
-                >
-                  <ArrowDownLeft
-                    v-if="tx.type === 'income' || tx.type === 'investment_in'"
-                    class="h-3 w-3"
-                  />
-                  <ArrowUpRight v-else class="h-3 w-3" />
-                  {{ badgeMeta(tx.type).label }}
-                </span>
-              </td>
-              <td class="px-5 py-3.5">
-                <p class="font-medium text-slate-100">{{ tx.category }}</p>
+      <template v-else>
+        <!-- Mobile Card List (< md) -->
+        <ul class="divide-y divide-vault-border md:hidden">
+          <li
+            v-for="tx in filteredTransactions"
+            :key="tx.id"
+            class="space-y-2.5 p-4"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                    :class="getTransactionPresentation(tx.type).badgeClass"
+                  >
+                    <ArrowDownLeft
+                      v-if="getTransactionPresentation(tx.type).isInflow"
+                      class="h-3 w-3"
+                    />
+                    <ArrowUpRight v-else class="h-3 w-3" />
+                    {{ getTransactionPresentation(tx.type).label }}
+                  </span>
+                  <span class="font-mono text-[11px] text-slate-400">
+                    {{ formatDateID(tx.transaction_date) }}
+                  </span>
+                </div>
+                <p class="mt-1.5 text-sm font-semibold text-white">{{ tx.category }}</p>
                 <p v-if="tx.note" class="mt-0.5 text-xs text-slate-400">{{ tx.note }}</p>
-              </td>
-              <td
-                class="whitespace-nowrap px-5 py-3.5 text-right font-mono font-semibold tabular-nums"
-                :class="
-                  tx.type === 'income' || tx.type === 'investment_in'
-                    ? 'text-emerald-400'
-                    : 'text-rose-400'
-                "
+              </div>
+
+              <button
+                type="button"
+                :disabled="deletingId === tx.id"
+                class="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-400 disabled:opacity-40"
+                aria-label="Hapus transaksi"
+                @click="handleDelete(tx.id)"
               >
-                {{ badgeMeta(tx.type).sign }}{{ formatIDR(tx.amount, true) }}
-              </td>
-              <td class="whitespace-nowrap px-5 py-3.5 text-right">
-                <button
-                  type="button"
-                  :disabled="deletingId === tx.id"
-                  class="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-400 disabled:opacity-40"
-                  title="Hapus transaksi"
-                  @click="handleDelete(tx.id)"
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </div>
+
+            <div class="flex items-center justify-end border-t border-white/5 pt-2">
+              <span
+                class="font-mono text-sm font-bold tabular-nums"
+                :class="getTransactionPresentation(tx.type).amountClass"
+              >
+                {{ getTransactionPresentation(tx.type).sign }}{{ formatIDR(tx.amount, true) }}
+              </span>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Desktop & Tablet Table (md+) -->
+        <div class="hidden overflow-x-auto md:block">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-vault-border bg-vault-surface text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-5 py-3.5">Tanggal</th>
+                <th class="px-5 py-3.5">Tipe</th>
+                <th class="px-5 py-3.5">Kategori &amp; Catatan</th>
+                <th class="px-5 py-3.5 text-right">Nominal (IDR)</th>
+                <th class="px-5 py-3.5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-vault-border">
+              <tr
+                v-for="tx in filteredTransactions"
+                :key="tx.id"
+                class="transition hover:bg-vault-elevated/40"
+              >
+                <td class="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-300">
+                  {{ formatDateID(tx.transaction_date) }}
+                </td>
+                <td class="whitespace-nowrap px-5 py-3.5">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold"
+                    :class="getTransactionPresentation(tx.type).badgeClass"
+                  >
+                    <ArrowDownLeft
+                      v-if="getTransactionPresentation(tx.type).isInflow"
+                      class="h-3 w-3"
+                    />
+                    <ArrowUpRight v-else class="h-3 w-3" />
+                    {{ getTransactionPresentation(tx.type).label }}
+                  </span>
+                </td>
+                <td class="px-5 py-3.5">
+                  <p class="font-medium text-slate-100">{{ tx.category }}</p>
+                  <p v-if="tx.note" class="mt-0.5 text-xs text-slate-400">{{ tx.note }}</p>
+                </td>
+                <td
+                  class="whitespace-nowrap px-5 py-3.5 text-right font-mono font-semibold tabular-nums"
+                  :class="getTransactionPresentation(tx.type).amountClass"
                 >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                  {{ getTransactionPresentation(tx.type).sign }}{{ formatIDR(tx.amount, true) }}
+                </td>
+                <td class="whitespace-nowrap px-5 py-3.5 text-right">
+                  <button
+                    type="button"
+                    :disabled="deletingId === tx.id"
+                    class="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-500/15 hover:text-rose-400 disabled:opacity-40"
+                    title="Hapus transaksi"
+                    aria-label="Hapus transaksi"
+                    @click="handleDelete(tx.id)"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </div>
 
     <TransactionModal :open="showTxModal" @close="showTxModal = false" />
