@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ArrowRight, CheckCircle2, Lock, Mail, ShieldCheck } from 'lucide-vue-next'
+import { getAuthConfirmUrl } from '~/utils/auth-url'
 
 definePageMeta({
   layout: false
 })
 
+const config = useRuntimeConfig()
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
@@ -39,7 +41,7 @@ async function handleRegister() {
       email: email.value.trim(),
       password: password.value,
       options: {
-        emailRedirectTo: import.meta.client ? `${window.location.origin}/confirm` : undefined
+        emailRedirectTo: getAuthConfirmUrl(config.public.siteUrl)
       }
     })
     if (error) {

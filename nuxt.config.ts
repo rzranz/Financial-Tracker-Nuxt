@@ -40,7 +40,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     cronSecret: process.env.CRON_SECRET || '',
     public: {
-      appName: 'FinVault'
+      appName: 'FinVault',
+      siteUrl:
+        process.env.NUXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : '')
     }
   },
 
