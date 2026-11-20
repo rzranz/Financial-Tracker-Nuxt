@@ -11,7 +11,7 @@ import {
   TrendingUp
 } from 'lucide-vue-next'
 import type { InvestmentRecord } from '~/types/database'
-import type { WalletCardId } from '~/utils/cards'
+import { type WalletCardId, getWalletCard, matchesWalletCard } from '~/utils/cards'
 import { daysUntilMaturity, formatDateID, formatIDR } from '~/utils/finance'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
 import { getUserDisplayName } from '~/utils/profile'
@@ -31,6 +31,7 @@ const {
 const showTxModal = ref(false)
 const txModalType = ref<'income' | 'expense'>('income')
 const txModalWallet = ref<WalletCardId>('all')
+const selectedCardId = ref<WalletCardId>('all')
 const showInvModal = ref(false)
 const claimingContract = ref<InvestmentRecord | null>(null)
 const syncing = ref(false)
@@ -42,6 +43,7 @@ onMounted(() => {
 })
 
 const displayName = computed(() => getUserDisplayName(user.value))
+const activeCardMeta = computed(() => getWalletCard(selectedCardId.value))
 
 const maturedContracts = computed(() =>
   investments.value.filter((inv) => inv.status === 'matured')
@@ -51,9 +53,13 @@ const activeAndMatured = computed(() =>
   investments.value.filter((inv) => inv.status === 'active' || inv.status === 'matured').slice(0, 4)
 )
 
-const recentTransactions = computed(() => transactions.value.slice(0, 6))
+const recentTransactions = computed(() =>
+  transactions.value
+    .filter((tx) => matchesWalletCard(tx, selectedCardId.value))
+    .slice(0, 6)
+)
 
-function openTransactionModal(initialType: 'income' | 'expense', wallet: WalletCardId = 'all') {
+function openTransactionModal(initialType: 'income' | 'expense', wallet: WalletCardId = selectedCardId.value) {
   txModalType.value = initialType
   txModalWallet.value = wallet
   showTxModal.value = true
@@ -163,6 +169,7 @@ async function handleSyncMaturity() {
 
     <!-- Stacked Card Deck + Balance Metrics -->
     <BalanceHeroCard
+      v-model:selected-card="selectedCardId"
       :summary="summary"
       :transactions="transactions"
       :loading="loading && !initialized"
@@ -241,8 +248,12 @@ async function handleSyncMaturity() {
 
           <div class="flex items-center justify-between gap-2">
             <div>
-              <h2 class="text-sm font-bold text-white">Mutasi Terakhir</h2>
-              <p class="mt-0.5 text-xs text-slate-400">Riwayat arus kas riil</p>
+              <h2 class="text-sm font-bold text-white">
+                {{ selectedCardId === 'all' ? 'Mutasi Terakhir' : `Mutasi · ${activeCardMeta.name}` }}
+              </h2>
+              <p class="mt-0.5 text-xs text-slate-400">
+                {{ selectedCardId === 'all' ? 'Riwayat arus kas riil' : `Transaksi khusus kartu ${activeCardMeta.shortLabel}` }}
+              </p>
             </div>
             <NuxtLink
               to="/ledger"
@@ -261,17 +272,23 @@ async function handleSyncMaturity() {
             v-else-if="recentTransactions.length === 0"
             class="mt-5 rounded-2xl border border-dashed border-white/10 bg-vault-bg/60 p-7 text-center"
           >
-            <p class="text-sm font-medium text-slate-300">Ledger kas masih kosong</p>
+            <p class="text-sm font-medium text-slate-300">
+              {{ selectedCardId === 'all' ? 'Ledger kas masih kosong' : `Belum ada mutasi di ${activeCardMeta.name}` }}
+            </p>
             <p class="mt-1 text-xs text-slate-500">
-              Tap tombol <span class="text-white">+ Catat Kas</span> untuk mencatat saldo awal.
+              {{
+                selectedCardId === 'all'
+                  ? 'Tap tombol + Catat Kas untuk mencatat saldo awal.'
+                  : `Catat pemasukan atau pengeluaran untuk kartu ${activeCardMeta.shortLabel}.`
+              }}
             </p>
             <button
               type="button"
               class="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-slate-200 active:scale-95"
-              @click="openTransactionModal('income')"
+              @click="openTransactionModal('income', selectedCardId)"
             >
               <Plus class="h-3.5 w-3.5" />
-              Catat Transaksi
+              {{ selectedCardId === 'all' ? 'Catat Transaksi' : `Catat di ${activeCardMeta.shortLabel}` }}
             </button>
           </div>
 
