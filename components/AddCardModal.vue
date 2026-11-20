@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Check, CreditCard, Sparkles } from 'lucide-vue-next'
+import { Check, Sparkles } from 'lucide-vue-next'
 import {
   CARD_THEMES,
   type CardThemeKey,
   type WalletCardConfig,
-  getCardTheme
+  buildCustomWalletCard
 } from '~/utils/cards'
 import { extractApiErrorMessage } from '~/utils/errors'
 
@@ -50,9 +50,14 @@ function applyTemplate(tpl: (typeof quickTemplates)[number]) {
   theme.value = tpl.theme
 }
 
-const previewTheme = computed(() => getCardTheme(theme.value))
-const previewDigits = computed(() =>
-  (last4.value || '0000').replace(/\D/g, '').slice(-4).padStart(4, '0')
+const previewCard = computed(() =>
+  buildCustomWalletCard({
+    id: 'preview',
+    name: name.value.trim() || 'Nama Rekening Baru',
+    shortLabel: shortLabel.value.trim() || undefined,
+    last4: last4.value,
+    theme: theme.value
+  })
 )
 
 async function handleSubmit() {
@@ -91,29 +96,15 @@ async function handleSubmit() {
     @close="emit('close')"
   >
     <form class="space-y-4" @submit.prevent="handleSubmit">
-      <!-- Live Card Preview -->
-      <div
-        class="relative overflow-hidden rounded-2xl bg-gradient-to-br p-4 text-white shadow-lg transition-all duration-300"
-        :class="previewTheme.gradientClass"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
-              <CreditCard class="h-3.5 w-3.5 text-white" />
-            </span>
-            <span class="text-xs font-bold uppercase tracking-wider">
-              {{ name.trim() || 'Nama Rekening Baru' }}
-            </span>
-          </div>
-          <span class="rounded-full bg-white/15 px-2.5 py-0.5 font-mono text-[10px] font-semibold">
-            {{ previewDigits }} · IDR
-          </span>
-        </div>
-        <p class="mt-4 font-mono text-lg font-extrabold tracking-tight">Rp 0</p>
-        <p class="mt-0.5 text-[11px] text-white/75">
-          Tag otomatis: <span class="font-mono font-semibold">[{{ shortLabel.trim() || name.trim().split(/\s+/)[0] || 'Card' }}]</span>
-        </p>
-      </div>
+      <!-- Live Physical Card Preview with Cutout Notch -->
+      <BankCard
+        :card="previewCard"
+        balance="0.00"
+        mode="preview"
+        :interactive="false"
+        notch-bg-class="bg-vault-surface"
+        notch-text-class="text-vault-surface"
+      />
 
       <!-- Quick Bank / E-Wallet Presets -->
       <div class="space-y-1.5">
