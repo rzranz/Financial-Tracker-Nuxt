@@ -13,6 +13,7 @@ import {
 import type { InvestmentRecord } from '~/types/database'
 import { daysUntilMaturity, formatDateID, formatIDR } from '~/utils/finance'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
+import { getUserDisplayName } from '~/utils/profile'
 
 const user = useSupabaseUser()
 const {
@@ -38,12 +39,7 @@ onMounted(() => {
   }
 })
 
-const displayName = computed(() => {
-  const email = user.value?.email
-  if (!email) return 'Investor'
-  const raw = email.split('@')[0] || 'Investor'
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
-})
+const displayName = computed(() => getUserDisplayName(user.value))
 
 const maturedContracts = computed(() =>
   investments.value.filter((inv) => inv.status === 'matured')

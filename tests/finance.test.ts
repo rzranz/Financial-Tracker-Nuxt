@@ -14,6 +14,7 @@ import {
 } from '~/server/utils/validation'
 import { extractApiErrorMessage } from '~/utils/errors'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
+import { getUserDisplayName, getUserInitials, getUserProfileMeta } from '~/utils/profile'
 
 describe('FinVault Financial Mathematical Model (PRD 1.5)', () => {
   it('eliminates floating point drift in decimal additions and subtractions', () => {
@@ -151,5 +152,24 @@ describe('Shared Presenters & Error Extraction', () => {
     expect(extractApiErrorMessage({ data: { statusMessage: 'Conflict' } }, 'Fallback')).toBe('Conflict')
     expect(extractApiErrorMessage({ statusMessage: 'Server Error' }, 'Fallback')).toBe('Server Error')
     expect(extractApiErrorMessage(null, 'Fallback')).toBe('Fallback')
+  })
+
+  it('derives display name, initials, and safe avatar theme from user metadata', () => {
+    const userWithMeta = {
+      email: 'rzranz07@gmail.com',
+      user_metadata: {
+        full_name: 'Rizki Ananda',
+        username: 'rzranz',
+        avatar_theme: 'amber'
+      }
+    }
+    expect(getUserDisplayName(userWithMeta)).toBe('Rizki Ananda')
+    expect(getUserInitials(userWithMeta)).toBe('RA')
+    expect(getUserProfileMeta(userWithMeta).avatar_theme).toBe('amber')
+
+    const fallbackUser = { email: 'finvault@example.com', user_metadata: { avatar_theme: 'unknown' } }
+    expect(getUserDisplayName(fallbackUser)).toBe('Finvault')
+    expect(getUserInitials(fallbackUser)).toBe('FI')
+    expect(getUserProfileMeta(fallbackUser).avatar_theme).toBe('violet')
   })
 })

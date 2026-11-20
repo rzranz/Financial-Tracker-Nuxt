@@ -7,8 +7,10 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
+  UserCog,
   X
 } from 'lucide-vue-next'
+import { getUserDisplayName } from '~/utils/profile'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -37,10 +39,7 @@ const navItems = computed(() => [
   }
 ])
 
-const userInitials = computed(() => {
-  const email = user.value?.email || 'FV'
-  return email.slice(0, 2).toUpperCase()
-})
+const displayName = computed(() => getUserDisplayName(user.value))
 
 async function handleSignOut() {
   isSigningOut.value = true
@@ -120,19 +119,19 @@ watch(
         </div>
 
         <div class="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-vault-card/70 px-3 py-2.5">
-          <div class="flex min-w-0 items-center gap-2.5">
-            <div
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/20 font-mono text-xs font-bold text-violet-200"
-            >
-              {{ userInitials }}
-            </div>
+          <NuxtLink
+            to="/profile"
+            class="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl transition hover:opacity-90"
+            title="Edit Profile"
+          >
+            <UserAvatar :user="user" size="sm" />
             <div class="min-w-0">
-              <p class="truncate text-xs font-medium text-slate-200">
-                {{ user?.email || 'Authenticated User' }}
+              <p class="truncate text-xs font-semibold text-slate-100 group-hover:text-violet-300">
+                {{ displayName }}
               </p>
-              <p class="text-[11px] text-slate-500">RLS Protected</p>
+              <p class="truncate text-[11px] text-slate-500">Edit Profile</p>
             </div>
-          </div>
+          </NuxtLink>
           <button
             type="button"
             :disabled="isSigningOut"
@@ -174,14 +173,14 @@ watch(
           />
         </NuxtLink>
 
-        <button
-          type="button"
-          class="flex h-10 w-10 items-center justify-center rounded-full border border-violet-400/30 bg-gradient-to-br from-violet-500/30 to-amber-500/20 font-mono text-xs font-bold text-white transition active:scale-95"
-          :title="user?.email || 'Profil'"
-          @click="mobileDrawerOpen = !mobileDrawerOpen"
+        <NuxtLink
+          to="/profile"
+          class="transition active:scale-95"
+          title="Edit Profile"
+          aria-label="Edit Profile"
         >
-          {{ userInitials }}
-        </button>
+          <UserAvatar :user="user" size="md" />
+        </NuxtLink>
       </div>
     </header>
 
@@ -196,20 +195,18 @@ watch(
     >
       <div
         v-if="mobileDrawerOpen"
-        class="fixed inset-x-4 top-16 z-40 rounded-3xl border border-white/10 bg-vault-surface/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden"
+        class="fixed inset-x-4 top-16 z-40 space-y-3 rounded-3xl border border-white/10 bg-vault-surface/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden"
       >
         <div class="flex items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/20 font-mono text-xs font-bold text-violet-200"
-            >
-              {{ userInitials }}
-            </div>
+            <UserAvatar :user="user" size="md" />
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-white">
+                {{ displayName }}
+              </p>
+              <p class="truncate text-[11px] text-slate-400">
                 {{ user?.email || 'FinVault User' }}
               </p>
-              <p class="text-[11px] text-emerald-400">Supabase RLS Active</p>
             </div>
           </div>
 
@@ -223,6 +220,14 @@ watch(
             Keluar
           </button>
         </div>
+
+        <NuxtLink
+          to="/profile"
+          class="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-vault-card px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-white/25 active:scale-[0.98]"
+        >
+          <UserCog class="h-4 w-4 text-violet-300" />
+          Edit Profile &amp; Keamanan
+        </NuxtLink>
       </div>
     </Transition>
 
