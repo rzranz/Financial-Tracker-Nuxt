@@ -12,7 +12,14 @@ import {
   createInvestmentSchema,
   createTransactionSchema
 } from '~/server/utils/validation'
-import { computeCardMetrics, formatNoteWithWallet, matchesWalletCard } from '~/utils/cards'
+import {
+  buildCustomWalletCard,
+  computeCardMetrics,
+  formatNoteWithWallet,
+  getCustomCardsFromUser,
+  matchesWalletCard,
+  mergeWalletCards
+} from '~/utils/cards'
 import { extractApiErrorMessage } from '~/utils/errors'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
 import { getUserDisplayName, getUserInitials, getUserProfileMeta } from '~/utils/profile'
@@ -198,5 +205,34 @@ describe('Shared Presenters & Error Extraction', () => {
     const ewalletMetrics = computeCardMetrics('ewallet', txs, summary)
     expect(ewalletMetrics.balance).toBe('-45000.00')
     expect(ewalletMetrics.outflow).toBe('45000.00')
+  })
+
+  it('builds and merges custom wallet cards and calculates their metrics', () => {
+    const customCard = buildCustomWalletCard({
+      id: 'custom-seabank-1024',
+      name: 'SeaBank',
+      shortLabel: 'SeaBank',
+      last4: '1024',
+      theme: 'amber'
+    })
+    const merged = mergeWalletCards([customCard])
+    expect(merged.some((c) => c.id === 'custom-seabank-1024')).toBe(true)
+
+    const parsedFromUser = getCustomCardsFromUser({
+      user_metadata: {
+        wallet_cards: [{ id: 'custom-bri-4910', name: 'BRI BritAma', shortLabel: 'BRI', last4: '4910', theme: 'sapphire' }]
+      }
+    })
+    expect(parsedFromUser).toHaveLength(1)
+    expect(parsedFromUser[0].shortLabel).toBe('BRI')
+
+    const customTxs = [
+      { type: 'income' as const, category: 'Transfer', note: '[SeaBank] Bonus', amount: '2500000.00' },
+      { type: 'expense' as const, category: 'Makan', note: '[SeaBank] Lunch', amount: '55000.00' }
+    ]
+    const metrics = computeCardMetrics('custom-seabank-1024', customTxs, computeFinancialSummary(customTxs, []), merged)
+    expect(metrics.balance).toBe('2445000.00')
+    expect(metrics.outflow).toBe('55000.00')
+    expect(metrics.txCount).toBe(2)
   })
 })

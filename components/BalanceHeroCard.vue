@@ -9,11 +9,12 @@ import {
   Plus,
   ShieldCheck,
   Sparkles,
+  Trash2,
   TrendingUp
 } from 'lucide-vue-next'
 import type { FinancialSummary, TransactionRecord } from '~/types/database'
 import {
-  WALLET_CARDS,
+  type WalletCardConfig,
   type WalletCardId,
   computeCardMetrics,
   getWalletCard
@@ -39,25 +40,28 @@ const emit = defineEmits<{
   (e: 'open-investments'): void
 }>()
 
+const { allCards, removeCustomCard } = useWalletCards()
 const isStackExpanded = ref(false)
+const showAddCardModal = ref(false)
+const deletingCardId = ref<string | null>(null)
 const spotlight = ref({ x: 50, y: 30, active: false })
 const showBackCardDetail = ref(false)
 
-const activeCard = computed(() => getWalletCard(props.selectedCard))
+const activeCard = computed(() => getWalletCard(props.selectedCard, allCards.value))
 
 const peekingCards = computed(() =>
-  WALLET_CARDS.filter((c) => c.id !== props.selectedCard).slice(0, 2)
+  allCards.value.filter((c: WalletCardConfig) => c.id !== props.selectedCard).slice(0, 2)
 )
 
 const allCardRows = computed(() =>
-  WALLET_CARDS.map((card) => ({
+  allCards.value.map((card: WalletCardConfig) => ({
     card,
-    metrics: computeCardMetrics(card.id, props.transactions, props.summary)
+    metrics: computeCardMetrics(card.id, props.transactions, props.summary, allCards.value)
   }))
 )
 
 const activeMetrics = computed(() =>
-  computeCardMetrics(props.selectedCard, props.transactions, props.summary)
+  computeCardMetrics(props.selectedCard, props.transactions, props.summary, allCards.value)
 )
 
 function toggleStack() {
@@ -67,6 +71,19 @@ function toggleStack() {
 function selectCardFromStack(cardId: WalletCardId) {
   emit('update:selectedCard', cardId)
   isStackExpanded.value = false
+}
+
+async function handleRemoveCustomCard(cardId: string) {
+  if (deletingCardId.value) return
+  deletingCardId.value = cardId
+  try {
+    await removeCustomCard(cardId)
+    if (props.selectedCard === cardId) {
+      emit('update:selectedCard', 'all')
+    }
+  } finally {
+    deletingCardId.value = null
+  }
 }
 
 function handlePointerMove(event: MouseEvent) {
@@ -323,20 +340,64 @@ const allocation = computed(() => {
                   </div>
                 </div>
 
-                <div class="shrink-0 text-right">
-                  <p class="font-mono text-sm font-extrabold text-white tabular-nums">
-                    {{ formatIDR(row.metrics.balance) }}
-                  </p>
-                  <p
-                    v-if="row.card.id !== 'all'"
-                    class="mt-0.5 font-mono text-[10px] text-white/75 tabular-nums"
+                <div class="flex shrink-0 items-center gap-2 text-right">
+                  <div>
+                    <p class="font-mono text-sm font-extrabold text-white tabular-nums">
+                      {{ formatIDR(row.metrics.balance) }}
+                    </p>
+                    <p
+                      v-if="row.card.id !== 'all'"
+                      class="mt-0.5 font-mono text-[10px] text-white/75 tabular-nums"
+                    >
+                      Keluar {{ formatIDR(row.metrics.outflow) }}
+                    </p>
+                  </div>
+                  <button
+                    v-if="row.card.isCustom"
+                    type="button"
+                    :disabled="deletingCardId === row.card.id"
+                    class="rounded-full bg-black/25 p-1.5 text-white/80 transition hover:bg-rose-500/80 hover:text-white active:scale-90 disabled:opacity-40"
+                    title="Hapus kartu kustom"
+                    aria-label="Hapus kartu kustom"
+                    @click.stop="handleRemoveCustomCard(row.card.id)"
                   >
-                    Keluar {{ formatIDR(row.metrics.outflow) }}
-                  </p>
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </button>
                 </div>
+              </button>
+
+              <!-- Dedicated "+ Add New Card" Card inside Fanned-Out Stack -->
+              <button
+                type="button"
+                class="stack-item-emerge group flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-white/20 bg-vault-card/70 p-4 text-left transition-all duration-200 hover:border-violet-400/50 hover:bg-vault-card active:scale-[0.98]"
+                :style="{ animationDelay: `${allCardRows.length * 45}ms` }"
+                @click="showAddCardModal = true"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-105"
+                  >
+                    <Plus class="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p class="text-sm font-bold text-white">Tambah Kartu / Rekening Baru</p>
+                    <p class="text-[11px] text-slate-400">
+                      Buat kartu bank atau e-wallet kustom Anda sendiri
+                    </p>
+                  </div>
+                </div>
+                <span class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">
+                  + Baru
+                </span>
               </button>
             </div>
           </Transition>
+
+          <AddCardModal
+            :open="showAddCardModal"
+            @close="showAddCardModal = false"
+            @created="(card) => selectCardFromStack(card.id)"
+          />
 
           <!-- Optional expandable detail drawer when clicking peeking Amber card -->
           <Transition

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { WALLET_CARDS, type WalletCardId, formatNoteWithWallet } from '~/utils/cards'
+import { type WalletCardId, formatNoteWithWallet } from '~/utils/cards'
 import { extractApiErrorMessage } from '~/utils/errors'
 import { formatIDR, todayUTC } from '~/utils/finance'
 
@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const { createTransaction } = useFinVault()
+const { allCards } = useWalletCards()
 
 const type = ref<'income' | 'expense'>(props.initialType)
 const walletId = ref<WalletCardId>(props.initialWallet)
@@ -84,7 +85,7 @@ async function handleSubmit() {
       type: type.value,
       category: category.value,
       amount: cleanedAmount,
-      note: formatNoteWithWallet(note.value, walletId.value),
+      note: formatNoteWithWallet(note.value, walletId.value, allCards.value),
       transaction_date: transactionDate.value
     })
     amount.value = ''
@@ -114,7 +115,7 @@ async function handleSubmit() {
         <span class="block text-xs font-medium text-slate-300">Kartu / Sumber Dana</span>
         <div class="flex flex-wrap gap-1.5">
           <button
-            v-for="card in WALLET_CARDS"
+            v-for="card in allCards"
             :key="card.id"
             type="button"
             class="rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 active:scale-95"

@@ -27,6 +27,7 @@ const {
   refreshAll,
   syncMaturity
 } = useFinVault()
+const { allCards } = useWalletCards()
 
 const showTxModal = ref(false)
 const txModalType = ref<'income' | 'expense'>('income')
@@ -43,7 +44,7 @@ onMounted(() => {
 })
 
 const displayName = computed(() => getUserDisplayName(user.value))
-const activeCardMeta = computed(() => getWalletCard(selectedCardId.value))
+const activeCardMeta = computed(() => getWalletCard(selectedCardId.value, allCards.value))
 
 const maturedContracts = computed(() =>
   investments.value.filter((inv) => inv.status === 'matured')
@@ -55,7 +56,7 @@ const activeAndMatured = computed(() =>
 
 const recentTransactions = computed(() =>
   transactions.value
-    .filter((tx) => matchesWalletCard(tx, selectedCardId.value))
+    .filter((tx) => matchesWalletCard(tx, selectedCardId.value, allCards.value))
     .slice(0, 6)
 )
 
