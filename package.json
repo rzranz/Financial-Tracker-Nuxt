@@ -19,10 +19,12 @@
     "decimal.js": "^10.6.0",
     "lucide-vue-next": "^1.0.0",
     "nuxt": "^3.21.11",
+    "ws": "^8.23.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@types/ws": "^8.18.2",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4",
     "vue-tsc": "^2.2.10"
