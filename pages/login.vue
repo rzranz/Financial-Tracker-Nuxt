@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-vue-next'
+import { Lock, Mail, RefreshCw } from 'lucide-vue-next'
 
 definePageMeta({
   layout: false
@@ -75,11 +75,7 @@ async function handleResendConfirmation() {
   <div class="flex min-h-[100dvh] items-center justify-center bg-vault-bg px-4 py-12">
     <div class="w-full max-w-md rounded-2xl border border-vault-border bg-vault-surface p-7 shadow-2xl">
       <div class="flex items-center gap-3">
-        <div
-          class="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-        >
-          <ShieldCheck class="h-5 w-5" />
-        </div>
+        <VaultOrbMotion size="sm" />
         <div>
           <h1 class="text-lg font-bold text-white">Masuk ke FinVault</h1>
           <p class="text-xs text-slate-400">Personal Cash Ledger &amp; Investment Contract Engine</p>

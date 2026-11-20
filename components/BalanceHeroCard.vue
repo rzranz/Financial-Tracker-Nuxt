@@ -29,29 +29,33 @@ const allocation = computed(() => {
 
 <template>
   <section class="space-y-4">
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
       <!-- Primary Liquid Cash Reality Card -->
       <div
-        class="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-vault-card via-vault-card to-emerald-950/30 p-6 lg:col-span-5"
+        class="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-vault-card via-vault-card to-emerald-950/30 p-5 sm:p-6 xl:col-span-5"
       >
-        <div class="flex items-center justify-between gap-2">
+        <div class="pointer-events-none absolute -right-2 top-3 opacity-35 sm:right-2 sm:top-4 sm:opacity-45">
+          <VaultOrbMotion size="lg" />
+        </div>
+
+        <div class="relative z-10 flex items-center justify-between gap-2">
           <span
             class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-300"
           >
-            <Wallet class="h-3.5 w-3.5" />
+            <Wallet class="h-3.5 w-3.5 shrink-0" />
             Kas Likuid (Uang Riil)
           </span>
           <span class="font-mono text-[11px] text-slate-400">C_l</span>
         </div>
 
-        <div class="mt-5">
+        <div class="relative z-10 mt-4 sm:mt-5">
           <div
             v-if="loading"
-            class="h-10 w-56 animate-pulse rounded-lg bg-slate-800"
+            class="h-9 w-48 animate-pulse rounded-lg bg-slate-800 sm:h-10 sm:w-56"
           />
           <p
             v-else
-            class="font-mono text-3xl font-bold tracking-tight text-white tabular-nums sm:text-4xl"
+            class="break-words font-mono text-2xl font-bold tracking-tight text-white tabular-nums sm:text-3xl xl:text-4xl"
           >
             {{ formatIDR(summary.liquidCash) }}
           </p>
@@ -61,16 +65,16 @@ const allocation = computed(() => {
           </p>
         </div>
 
-        <div class="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 text-xs">
+        <div class="relative z-10 mt-5 grid grid-cols-1 gap-3 border-t border-white/10 pt-4 text-xs sm:grid-cols-2">
           <div>
             <p class="text-slate-400">Total Masuk</p>
-            <p class="mt-0.5 font-mono font-semibold text-emerald-400 tabular-nums">
+            <p class="mt-0.5 break-words font-mono font-semibold text-emerald-400 tabular-nums">
               +{{ formatIDR(summary.totalIncome) }}
             </p>
           </div>
           <div>
             <p class="text-slate-400">Total Belanja</p>
-            <p class="mt-0.5 font-mono font-semibold text-rose-400 tabular-nums">
+            <p class="mt-0.5 break-words font-mono font-semibold text-rose-400 tabular-nums">
               -{{ formatIDR(summary.totalExpense) }}
             </p>
           </div>
@@ -78,15 +82,15 @@ const allocation = computed(() => {
       </div>
 
       <!-- Secondary 3 Metrics: Locked Principal, Projected Profit, Total Projected Net Worth -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-7">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3 xl:col-span-7">
         <!-- Locked Principal -->
         <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
           <div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300"
               >
-                <Lock class="h-3 w-3" />
+                <Lock class="h-3 w-3 shrink-0" />
                 Locked Principal
               </span>
               <span class="font-mono text-[11px] text-slate-500">P_l</span>
@@ -94,7 +98,7 @@ const allocation = computed(() => {
             <div v-if="loading" class="mt-4 h-8 w-36 animate-pulse rounded-lg bg-slate-800" />
             <p
               v-else
-              class="mt-4 font-mono text-2xl font-bold text-slate-100 tabular-nums"
+              class="mt-4 break-words font-mono text-xl font-bold text-slate-100 tabular-nums sm:text-2xl"
             >
               {{ formatIDR(summary.lockedPrincipal) }}
             </p>
@@ -107,11 +111,11 @@ const allocation = computed(() => {
         <!-- Projected Profit -->
         <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
           <div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300"
               >
-                <TrendingUp class="h-3 w-3" />
+                <TrendingUp class="h-3 w-3 shrink-0" />
                 Projected Profit
               </span>
               <span class="font-mono text-[11px] text-slate-500">R_p</span>
@@ -119,7 +123,7 @@ const allocation = computed(() => {
             <div v-if="loading" class="mt-4 h-8 w-36 animate-pulse rounded-lg bg-slate-800" />
             <p
               v-else
-              class="mt-4 font-mono text-2xl font-bold text-sky-300 tabular-nums"
+              class="mt-4 break-words font-mono text-xl font-bold text-sky-300 tabular-nums sm:text-2xl"
             >
               +{{ formatIDR(summary.projectedProfit) }}
             </p>
@@ -132,11 +136,11 @@ const allocation = computed(() => {
         <!-- Projected Net Worth -->
         <div class="flex flex-col justify-between rounded-2xl border border-vault-border bg-vault-card p-5">
           <div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-slate-600/40 bg-slate-800 px-2.5 py-0.5 text-[11px] font-semibold text-slate-200"
               >
-                <Sparkles class="h-3 w-3 text-amber-400" />
+                <Sparkles class="h-3 w-3 shrink-0 text-amber-400" />
                 Projected Net Worth
               </span>
               <span class="font-mono text-[11px] text-slate-500">N_p</span>
@@ -144,7 +148,7 @@ const allocation = computed(() => {
             <div v-if="loading" class="mt-4 h-8 w-36 animate-pulse rounded-lg bg-slate-800" />
             <p
               v-else
-              class="mt-4 font-mono text-2xl font-bold text-white tabular-nums"
+              class="mt-4 break-words font-mono text-xl font-bold text-white tabular-nums sm:text-2xl"
             >
               {{ formatIDR(summary.projectedNetWorth) }}
             </p>
@@ -158,9 +162,9 @@ const allocation = computed(() => {
 
     <!-- Capital Allocation Bar -->
     <div class="rounded-2xl border border-vault-border bg-vault-card px-5 py-4">
-      <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="flex flex-col justify-between gap-2 text-xs sm:flex-row sm:items-center">
         <span class="font-semibold text-slate-300">Komposisi Kekayaan &amp; Likuiditas</span>
-        <div class="flex flex-wrap items-center gap-4 text-slate-400">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-slate-400">
           <span class="inline-flex items-center gap-1.5">
             <span class="h-2 w-2 rounded-full bg-emerald-400" />
             Likuid {{ allocation.liquidPct }}%
