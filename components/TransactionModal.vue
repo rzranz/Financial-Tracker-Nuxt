@@ -2,9 +2,15 @@
 import { extractApiErrorMessage } from '~/utils/errors'
 import { formatIDR, todayUTC } from '~/utils/finance'
 
-const props = defineProps<{
-  open: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    initialType?: 'income' | 'expense'
+  }>(),
+  {
+    initialType: 'income'
+  }
+)
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -12,8 +18,8 @@ const emit = defineEmits<{
 
 const { createTransaction } = useFinVault()
 
-const type = ref<'income' | 'expense'>('income')
-const category = ref('Gaji')
+const type = ref<'income' | 'expense'>(props.initialType)
+const category = ref(props.initialType === 'income' ? 'Gaji' : 'Makan & Minum')
 const amount = ref('')
 const note = ref('')
 const transactionDate = ref(todayUTC())
@@ -47,6 +53,8 @@ watch(
   () => props.open,
   (isOpen: boolean) => {
     if (isOpen) {
+      type.value = props.initialType
+      category.value = props.initialType === 'income' ? incomeCategories[0] : expenseCategories[0]
       errorMessage.value = ''
     }
   }

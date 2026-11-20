@@ -26,10 +26,10 @@ const bars = computed(() => {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-vault-border bg-vault-card p-5">
+  <div class="vault-bezel rounded-[28px] p-5">
     <div class="flex items-center justify-between">
       <div>
-        <h3 class="text-sm font-semibold text-white">Aliran Mutasi Kas Riil</h3>
+        <h3 class="text-sm font-bold text-white">Aliran Mutasi Kas Riil</h3>
         <p class="mt-0.5 text-xs text-slate-400">
           Perbandingan arus masuk vs keluar berdasarkan ledger aktual
         </p>

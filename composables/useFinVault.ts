@@ -29,6 +29,7 @@ export function useFinVault() {
   const notifications = useState<NotificationRecord[]>('finvault-notifications', () => [])
   const loading = useState<boolean>('finvault-loading', () => false)
   const initialized = useState<boolean>('finvault-initialized', () => false)
+  const schemaMissing = useState<boolean>('finvault-schema-missing', () => false)
   const { pushToast } = useToast()
 
   function resetState() {
@@ -37,10 +38,12 @@ export function useFinVault() {
     investments.value = []
     notifications.value = []
     initialized.value = false
+    schemaMissing.value = false
   }
 
   async function refreshAll() {
     loading.value = true
+    schemaMissing.value = false
     try {
       const [sumData, txData, invData, notifData] = await Promise.all([
         $fetch<FinancialSummary>('/api/summary'),
@@ -54,9 +57,15 @@ export function useFinVault() {
       notifications.value = notifData
       initialized.value = true
     } catch (err: unknown) {
+      const message = extractApiErrorMessage(err, 'Gagal memuat data keuangan')
+      if (message.includes('schema cache') || message.includes('does not exist')) {
+        schemaMissing.value = true
+        initialized.value = true
+        return
+      }
       pushToast({
         title: 'Sinkronisasi Gagal',
-        description: extractApiErrorMessage(err, 'Gagal memuat data keuangan'),
+        description: message,
         variant: 'error'
       })
     } finally {
@@ -177,6 +186,7 @@ export function useFinVault() {
     notifications,
     loading,
     initialized,
+    schemaMissing,
     resetState,
     refreshAll,
     createTransaction,

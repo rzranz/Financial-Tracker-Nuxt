@@ -2,50 +2,74 @@
 import {
   ArrowLeftRight,
   Bell,
+  Home,
   Landmark,
-  LayoutDashboard,
   LogOut,
-  ShieldCheck
+  Menu,
+  ShieldCheck,
+  X
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
-const { summary } = useFinVault()
+const { summary, resetState } = useFinVault()
+
+const mobileDrawerOpen = ref(false)
+const isSigningOut = ref(false)
 
 const navItems = computed(() => [
-  { to: '/', label: 'Overview', icon: LayoutDashboard },
-  { to: '/ledger', label: 'Cash Ledger', icon: ArrowLeftRight },
-  { to: '/investments', label: 'Investments', icon: Landmark, badge: summary.value.maturedCount || 0 },
+  { to: '/', label: 'Overview', mobileLabel: 'Home', icon: Home },
+  { to: '/ledger', label: 'Cash Ledger', mobileLabel: 'Ledger', icon: ArrowLeftRight },
+  {
+    to: '/investments',
+    label: 'Investments',
+    mobileLabel: 'Invest',
+    icon: Landmark,
+    badge: summary.value.maturedCount || 0
+  },
   {
     to: '/notifications',
     label: 'Notifications',
+    mobileLabel: 'Alerts',
     icon: Bell,
     badge: summary.value.unreadNotifications || 0
   }
 ])
 
-const isSigningOut = ref(false)
+const userInitials = computed(() => {
+  const email = user.value?.email || 'FV'
+  return email.slice(0, 2).toUpperCase()
+})
+
 async function handleSignOut() {
   isSigningOut.value = true
   try {
     await supabase.auth.signOut()
+    resetState()
     await navigateTo('/login')
   } finally {
     isSigningOut.value = false
   }
 }
+
+watch(
+  () => route.path,
+  () => {
+    mobileDrawerOpen.value = false
+  }
+)
 </script>
 
 <template>
-  <div class="min-h-[100dvh] bg-vault-bg text-slate-100">
+  <div class="min-h-[100dvh] overflow-x-hidden bg-vault-bg text-slate-100">
     <!-- Desktop Sidebar -->
     <aside
-      class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-vault-border bg-vault-surface lg:flex"
+      class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/[0.07] bg-vault-surface lg:flex"
     >
-      <div class="flex h-16 items-center gap-3 border-b border-vault-border px-5">
+      <div class="flex h-16 items-center gap-3 border-b border-white/[0.07] px-5">
         <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/15 text-violet-300"
         >
           <ShieldCheck class="h-5 w-5" />
         </div>
@@ -55,16 +79,16 @@ async function handleSignOut() {
         </div>
       </div>
 
-      <nav class="flex-1 space-y-1.5 px-3 py-5">
+      <nav class="flex-1 space-y-1.5 px-3 py-5" aria-label="Navigasi utama">
         <NuxtLink
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors"
+          class="group flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
           :class="
             route.path === item.to
-              ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-              : 'border border-transparent text-slate-400 hover:bg-vault-card hover:text-slate-100'
+              ? 'bg-white text-slate-950 shadow-sm'
+              : 'text-slate-400 hover:bg-vault-card hover:text-slate-100'
           "
         >
           <span class="flex items-center gap-3">
@@ -73,16 +97,21 @@ async function handleSignOut() {
           </span>
           <span
             v-if="item.badge && item.badge > 0"
-            class="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-500/20 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-amber-300"
+            class="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 font-mono text-[11px] font-bold"
+            :class="
+              route.path === item.to
+                ? 'bg-slate-950 text-amber-400'
+                : 'bg-amber-500/20 text-amber-300'
+            "
           >
             {{ item.badge }}
           </span>
         </NuxtLink>
       </nav>
 
-      <div class="border-t border-vault-border p-4">
-        <div class="mb-3 rounded-xl border border-vault-border bg-vault-card p-3">
-          <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
+      <div class="border-t border-white/[0.07] p-4">
+        <div class="mb-3 rounded-2xl border border-white/[0.07] bg-vault-card p-3.5">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
             Zero-Bias Accounting
           </p>
           <p class="mt-1 text-xs leading-relaxed text-slate-400">
@@ -90,18 +119,26 @@ async function handleSignOut() {
           </p>
         </div>
 
-        <div class="flex items-center justify-between gap-2 rounded-xl bg-vault-card/60 px-3 py-2.5">
-          <div class="min-w-0">
-            <p class="truncate text-xs font-medium text-slate-200">
-              {{ user?.email || 'Authenticated User' }}
-            </p>
-            <p class="text-[11px] text-slate-500">RLS Protected</p>
+        <div class="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-vault-card/70 px-3 py-2.5">
+          <div class="flex min-w-0 items-center gap-2.5">
+            <div
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/20 font-mono text-xs font-bold text-violet-200"
+            >
+              {{ userInitials }}
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-xs font-medium text-slate-200">
+                {{ user?.email || 'Authenticated User' }}
+              </p>
+              <p class="text-[11px] text-slate-500">RLS Protected</p>
+            </div>
           </div>
           <button
             type="button"
             :disabled="isSigningOut"
-            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400 disabled:opacity-50"
+            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400 active:scale-95 disabled:opacity-50"
             title="Keluar"
+            aria-label="Keluar dari akun"
             @click="handleSignOut"
           >
             <LogOut class="h-4 w-4" />
@@ -110,55 +147,119 @@ async function handleSignOut() {
       </div>
     </aside>
 
-    <!-- Mobile Header -->
+    <!-- Pinterest-Style Minimal Mobile Header -->
     <header
-      class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-vault-border bg-vault-surface/95 px-4 backdrop-blur-md lg:hidden"
+      class="sticky top-0 z-30 flex items-center justify-between bg-vault-bg/85 px-4 pb-2 pt-3 backdrop-blur-xl lg:hidden"
     >
-      <div class="flex items-center gap-2.5">
-        <div
-          class="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-        >
-          <ShieldCheck class="h-4 w-4" />
-        </div>
-        <span class="text-sm font-bold tracking-tight text-white">FinVault</span>
-      </div>
       <button
         type="button"
-        :disabled="isSigningOut"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-vault-border bg-vault-card px-2.5 py-1.5 text-xs font-medium text-slate-300 transition hover:text-rose-400"
-        @click="handleSignOut"
+        class="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-200 transition hover:border-white/20 active:scale-95"
+        aria-label="Menu akun"
+        @click="mobileDrawerOpen = !mobileDrawerOpen"
       >
-        <LogOut class="h-3.5 w-3.5" />
-        <span>Keluar</span>
+        <X v-if="mobileDrawerOpen" class="h-4 w-4" />
+        <Menu v-else class="h-4 w-4" />
       </button>
+
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          to="/notifications"
+          class="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-200 transition hover:border-white/20 active:scale-95"
+          aria-label="Notifikasi"
+        >
+          <Bell class="h-4 w-4" />
+          <span
+            v-if="summary.unreadNotifications > 0"
+            class="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-vault-card"
+          />
+        </NuxtLink>
+
+        <button
+          type="button"
+          class="flex h-10 w-10 items-center justify-center rounded-full border border-violet-400/30 bg-gradient-to-br from-violet-500/30 to-amber-500/20 font-mono text-xs font-bold text-white transition active:scale-95"
+          :title="user?.email || 'Profil'"
+          @click="mobileDrawerOpen = !mobileDrawerOpen"
+        >
+          {{ userInitials }}
+        </button>
+      </div>
     </header>
 
+    <!-- Mobile Quick Account Sheet -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="-translate-y-2 opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="-translate-y-2 opacity-0"
+    >
+      <div
+        v-if="mobileDrawerOpen"
+        class="fixed inset-x-4 top-16 z-40 rounded-3xl border border-white/10 bg-vault-surface/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-500/20 font-mono text-xs font-bold text-violet-200"
+            >
+              {{ userInitials }}
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-white">
+                {{ user?.email || 'FinVault User' }}
+              </p>
+              <p class="text-[11px] text-emerald-400">Supabase RLS Active</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            :disabled="isSigningOut"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-300 transition active:scale-95"
+            @click="handleSignOut"
+          >
+            <LogOut class="h-3.5 w-3.5" />
+            Keluar
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Main Content -->
-    <main class="pb-24 lg:pb-10 lg:pl-64">
-      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <main class="pb-28 lg:pb-10 lg:pl-64">
+      <div class="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
         <slot />
       </div>
     </main>
 
-    <!-- Mobile Bottom Navigation -->
+    <!-- Pinterest-Style Floating Pill Bottom Dock (Mobile & Tablet) -->
     <nav
-      class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-vault-border bg-vault-surface/95 backdrop-blur-md lg:hidden"
+      aria-label="Navigasi mobile"
+      class="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/10 bg-[#13151E]/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl lg:hidden"
     >
       <NuxtLink
         v-for="item in navItems"
         :key="item.to"
         :to="item.to"
-        class="relative flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors"
-        :class="route.path === item.to ? 'text-emerald-400' : 'text-slate-400'"
+        class="relative flex items-center justify-center gap-2 rounded-full transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95"
+        :class="
+          route.path === item.to
+            ? 'bg-white px-4 py-2.5 text-slate-950 shadow-sm'
+            : 'h-10 w-10 text-slate-400 hover:bg-white/5 hover:text-white'
+        "
       >
-        <component :is="item.icon" class="h-4 w-4" />
-        <span>{{ item.label === 'Notifications' ? 'Alerts' : item.label }}</span>
+        <component :is="item.icon" class="h-4 w-4 shrink-0" />
         <span
-          v-if="item.badge && item.badge > 0"
-          class="absolute right-4 top-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 font-mono text-[10px] font-bold text-slate-950"
+          v-if="route.path === item.to"
+          class="text-xs font-bold tracking-tight"
         >
-          {{ item.badge }}
+          {{ item.mobileLabel }}
         </span>
+        <span
+          v-if="item.badge && item.badge > 0 && route.path !== item.to"
+          class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-400"
+        />
       </NuxtLink>
     </nav>
 
