@@ -12,6 +12,7 @@ import {
   createInvestmentSchema,
   createTransactionSchema
 } from '~/server/utils/validation'
+import { computeCardMetrics, formatNoteWithWallet, matchesWalletCard } from '~/utils/cards'
 import { extractApiErrorMessage } from '~/utils/errors'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
 import { getUserDisplayName, getUserInitials, getUserProfileMeta } from '~/utils/profile'
@@ -171,5 +172,31 @@ describe('Shared Presenters & Error Extraction', () => {
     expect(getUserDisplayName(fallbackUser)).toBe('Finvault')
     expect(getUserInitials(fallbackUser)).toBe('FI')
     expect(getUserProfileMeta(fallbackUser).avatar_theme).toBe('violet')
+  })
+
+  it('tags and computes wallet card metrics for BCA, BNI, and E-Wallet accurately', () => {
+    expect(formatNoteWithWallet('Gaji bulanan', 'bca')).toBe('[BCA] Gaji bulanan')
+    expect(formatNoteWithWallet('', 'ewallet')).toBe('[E-Wallet]')
+    expect(formatNoteWithWallet('Tanpa tag', 'all')).toBe('Tanpa tag')
+
+    const txs = [
+      { type: 'income' as const, category: 'Gaji', note: '[BCA] Gaji', amount: '10000000.00' },
+      { type: 'expense' as const, category: 'Belanja', note: '[BCA] Listrik', amount: '750000.00' },
+      { type: 'expense' as const, category: 'Kopi', note: 'QRIS GoPay', amount: '45000.00' }
+    ]
+
+    expect(matchesWalletCard(txs[0], 'bca')).toBe(true)
+    expect(matchesWalletCard(txs[2], 'ewallet')).toBe(true)
+
+    const summary = computeFinancialSummary(txs, [])
+    const bcaMetrics = computeCardMetrics('bca', txs, summary)
+    expect(bcaMetrics.balance).toBe('9250000.00')
+    expect(bcaMetrics.inflow).toBe('10000000.00')
+    expect(bcaMetrics.outflow).toBe('750000.00')
+    expect(bcaMetrics.txCount).toBe(2)
+
+    const ewalletMetrics = computeCardMetrics('ewallet', txs, summary)
+    expect(ewalletMetrics.balance).toBe('-45000.00')
+    expect(ewalletMetrics.outflow).toBe('45000.00')
   })
 })

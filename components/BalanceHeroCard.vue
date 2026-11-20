@@ -1,21 +1,45 @@
 <script setup lang="ts">
 import Decimal from 'decimal.js'
-import { Lock, Plus, ShieldCheck, Sparkles, TrendingUp } from 'lucide-vue-next'
-import type { FinancialSummary } from '~/types/database'
+import { CreditCard, Lock, Plus, ShieldCheck, Sparkles, TrendingUp } from 'lucide-vue-next'
+import type { FinancialSummary, TransactionRecord } from '~/types/database'
+import {
+  WALLET_CARDS,
+  type WalletCardId,
+  computeCardMetrics,
+  getWalletCard
+} from '~/utils/cards'
 import { formatIDR, toDecimal } from '~/utils/finance'
 
-const props = defineProps<{
-  summary: FinancialSummary
-  loading?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    summary: FinancialSummary
+    transactions?: TransactionRecord[]
+    loading?: boolean
+  }>(),
+  {
+    transactions: () => []
+  }
+)
 
 const emit = defineEmits<{
-  (e: 'add-cash'): void
+  (e: 'add-cash', wallet: WalletCardId): void
   (e: 'open-investments'): void
 }>()
 
+const selectedCardId = ref<WalletCardId>('all')
 const spotlight = ref({ x: 50, y: 30, active: false })
 const showBackCardDetail = ref(false)
+
+const cardTabs = WALLET_CARDS.map((card) => ({
+  key: card.id,
+  label: card.shortLabel
+}))
+
+const activeCard = computed(() => getWalletCard(selectedCardId.value))
+
+const cardMetrics = computed(() =>
+  computeCardMetrics(selectedCardId.value, props.transactions, props.summary)
+)
 
 function handlePointerMove(event: MouseEvent) {
   const el = event.currentTarget as HTMLElement | null
@@ -52,8 +76,16 @@ const allocation = computed(() => {
 
 <template>
   <section class="space-y-4">
+    <!-- Multi-Card Selector (Triggers Card-In / Card-Out Animation) -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <SegmentedTabs v-model="selectedCardId" :items="cardTabs" />
+      <span class="hidden text-xs text-slate-400 sm:inline">
+        Pilih kartu untuk melihat arus kas per rekening / e-wallet
+      </span>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-      <!-- Pinterest-Style Stacked Card Deck with Concave Bottom-Right Cutout Notch -->
+      <!-- Stacked Card Deck with Card-Swap Animation & Concave Cutout Notch -->
       <div class="xl:col-span-5">
         <div class="relative pt-1">
           <!-- Peeking Amber Gold Back Card (Locked Principal P_l) -->
@@ -75,97 +107,113 @@ const allocation = computed(() => {
             </span>
           </button>
 
-          <!-- Main Front Violet Card (Liquid Cash C_l) with Cutout Notch -->
-          <div
-            class="group relative z-10 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#7C3AED] via-[#8B5CF6] to-[#6D28D9] p-5 pb-6 text-white shadow-[0_24px_50px_-20px_rgba(124,58,237,0.55)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:p-6 sm:pb-7"
-            @mousemove="handlePointerMove"
-            @mouseleave="handlePointerLeave"
-          >
-            <!-- Pointer Spotlight -->
-            <div
-              aria-hidden="true"
-              class="pointer-events-none absolute inset-0 transition-opacity duration-500"
-              :class="spotlight.active ? 'opacity-100' : 'opacity-0'"
-              :style="{
-                background: `radial-gradient(280px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255, 255, 255, 0.18), transparent 70%)`
-              }"
-            />
-
-            <!-- Card Top Row -->
-            <div class="relative z-10 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
-                  <ShieldCheck class="h-4 w-4 text-white" />
-                </span>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-white/85">
-                  Kas Likuid (Riil)
-                </span>
-              </div>
-              <span class="rounded-full bg-white/15 px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-white/90">
-                C_l · IDR
-              </span>
-            </div>
-
-            <!-- Balance Display -->
-            <div class="relative z-10 mt-5">
-              <p class="text-xs font-medium text-white/75">Real Spendable Balance</p>
+          <!-- Animated Card-Swap Container -->
+          <div class="card-stage relative z-10">
+            <Transition name="card-swap" mode="out-in">
               <div
-                v-if="loading"
-                class="mt-1.5 h-9 w-48 animate-pulse rounded-xl bg-white/20"
-              />
-              <p
-                v-else
-                class="mt-1 break-words font-mono text-3xl font-extrabold tracking-tight text-white tabular-nums sm:text-4xl"
+                :key="activeCard.id"
+                class="group relative overflow-hidden rounded-[26px] bg-gradient-to-br p-5 pb-6 text-white transition-shadow duration-300 sm:p-6 sm:pb-7"
+                :class="activeCard.gradientClass"
+                :style="{ boxShadow: `0 24px 50px -20px ${activeCard.shadowColor}` }"
+                @mousemove="handlePointerMove"
+                @mouseleave="handlePointerLeave"
               >
-                {{ formatIDR(summary.liquidCash) }}
-              </p>
-            </div>
+                <!-- Pointer Spotlight -->
+                <div
+                  aria-hidden="true"
+                  class="pointer-events-none absolute inset-0 transition-opacity duration-500"
+                  :class="spotlight.active ? 'opacity-100' : 'opacity-0'"
+                  :style="{
+                    background: `radial-gradient(280px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255, 255, 255, 0.2), transparent 70%)`
+                  }"
+                />
 
-            <!-- Card Bottom Left Info (Leaves clean room for bottom-right cutout notch) -->
-            <div class="relative z-10 mt-6 pr-36 sm:pr-40">
-              <p class="text-[11px] text-white/70">Projected Net Worth</p>
-              <p class="mt-0.5 truncate font-mono text-sm font-bold text-white tabular-nums">
-                {{ formatIDR(summary.projectedNetWorth) }}
-              </p>
-            </div>
+                <!-- Card Top Row -->
+                <div class="relative z-10 flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
+                      <ShieldCheck v-if="activeCard.id === 'all'" class="h-4 w-4 text-white" />
+                      <CreditCard v-else class="h-4 w-4 text-white" />
+                    </span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white/90">
+                      {{ activeCard.name }}
+                    </span>
+                  </div>
+                  <span class="rounded-full bg-white/15 px-2.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-white/90">
+                    {{ activeCard.maskedNumber.slice(-4) }} · IDR
+                  </span>
+                </div>
 
-            <!-- Bottom-Right Concave Cutout Notch ("Out-Shape-From-Shape") -->
-            <div
-              class="absolute bottom-0 right-0 z-20 rounded-tl-[26px] bg-vault-bg pl-2.5 pt-2.5"
-            >
-              <!-- Left concave fillet connecting card bottom edge to notch -->
-              <svg
-                aria-hidden="true"
-                class="pointer-events-none absolute -left-5 bottom-0 h-5 w-5 text-vault-bg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
-              </svg>
-              <!-- Top concave fillet connecting card right edge to notch -->
-              <svg
-                aria-hidden="true"
-                class="pointer-events-none absolute -top-5 right-0 h-5 w-5 text-vault-bg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
-              </svg>
+                <!-- Balance Display -->
+                <div class="relative z-10 mt-5">
+                  <p class="text-xs font-medium text-white/75">{{ activeCard.subtitle }}</p>
+                  <div
+                    v-if="loading"
+                    class="mt-1.5 h-9 w-48 animate-pulse rounded-xl bg-white/20"
+                  />
+                  <p
+                    v-else
+                    class="mt-1 break-words font-mono text-3xl font-extrabold tracking-tight text-white tabular-nums sm:text-4xl"
+                  >
+                    {{ formatIDR(cardMetrics.balance) }}
+                  </p>
+                </div>
 
-              <!-- Button-in-Button CTA nestled inside the cutout -->
-              <button
-                type="button"
-                class="group/btn inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#151722] py-1.5 pl-2 pr-4 text-xs font-bold text-white shadow-lg transition-all duration-200 hover:border-white/30 hover:bg-[#1E2130] active:scale-[0.96]"
-                @click="emit('add-cash')"
-              >
-                <span
-                  class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:rotate-90 group-hover/btn:scale-105"
+                <!-- Card Bottom Left Info (Leaves clean room for bottom-right cutout notch) -->
+                <div class="relative z-10 mt-6 pr-36 sm:pr-40">
+                  <template v-if="activeCard.id === 'all'">
+                    <p class="text-[11px] text-white/70">Projected Net Worth</p>
+                    <p class="mt-0.5 truncate font-mono text-sm font-bold text-white tabular-nums">
+                      {{ formatIDR(summary.projectedNetWorth) }}
+                    </p>
+                  </template>
+                  <template v-else>
+                    <p class="text-[11px] text-white/75">
+                      {{ cardMetrics.txCount }} mutasi · Keluar
+                      <span class="font-mono font-semibold text-white">{{ formatIDR(cardMetrics.outflow) }}</span>
+                    </p>
+                    <p class="mt-0.5 truncate font-mono text-xs font-semibold text-white/90 tabular-nums">
+                      Masuk: +{{ formatIDR(cardMetrics.inflow) }}
+                    </p>
+                  </template>
+                </div>
+
+                <!-- Bottom-Right Concave Cutout Notch ("Out-Shape-From-Shape") -->
+                <div
+                  class="absolute bottom-0 right-0 z-20 rounded-tl-[26px] bg-vault-bg pl-2.5 pt-2.5"
                 >
-                  <Plus class="h-4 w-4" />
-                </span>
-                <span>Catat Kas</span>
-              </button>
-            </div>
+                  <svg
+                    aria-hidden="true"
+                    class="pointer-events-none absolute -left-5 bottom-0 h-5 w-5 text-vault-bg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
+                  </svg>
+                  <svg
+                    aria-hidden="true"
+                    class="pointer-events-none absolute -top-5 right-0 h-5 w-5 text-vault-bg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
+                  </svg>
+
+                  <button
+                    type="button"
+                    class="group/btn inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#151722] py-1.5 pl-2 pr-4 text-xs font-bold text-white shadow-lg transition-all duration-200 hover:border-white/30 hover:bg-[#1E2130] active:scale-[0.96]"
+                    @click="emit('add-cash', activeCard.id)"
+                  >
+                    <span
+                      class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:rotate-90 group-hover/btn:scale-105"
+                    >
+                      <Plus class="h-4 w-4" />
+                    </span>
+                    <span>{{ activeCard.id === 'all' ? 'Catat Kas' : `+ ${activeCard.shortLabel}` }}</span>
+                  </button>
+                </div>
+              </div>
+            </Transition>
           </div>
 
           <!-- Optional expandable detail drawer when clicking peeking Amber card -->
@@ -203,7 +251,6 @@ const allocation = computed(() => {
 
       <!-- Secondary 3 Metrics: Double-Bezel Cards -->
       <div class="grid grid-cols-1 gap-3.5 md:grid-cols-3 xl:col-span-7">
-        <!-- Locked Principal -->
         <div
           class="vault-card-interactive vault-bezel group relative flex flex-col justify-between overflow-hidden rounded-[24px] p-5"
         >
@@ -234,7 +281,6 @@ const allocation = computed(() => {
           </p>
         </div>
 
-        <!-- Projected Profit -->
         <div
           class="vault-card-interactive vault-bezel group relative flex flex-col justify-between overflow-hidden rounded-[24px] p-5"
         >
@@ -265,7 +311,6 @@ const allocation = computed(() => {
           </p>
         </div>
 
-        <!-- Projected Net Worth -->
         <div
           class="vault-card-interactive vault-bezel group relative flex flex-col justify-between overflow-hidden rounded-[24px] p-5"
         >
@@ -334,3 +379,37 @@ const allocation = computed(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.card-stage {
+  perspective: 1100px;
+}
+
+.card-swap-enter-active,
+.card-swap-leave-active {
+  transition:
+    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.card-swap-enter-from {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0) scale(0.95) rotateX(6deg);
+}
+
+.card-swap-leave-to {
+  opacity: 0;
+  transform: translate3d(0, -18px, 0) scale(0.95) rotateX(-6deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-swap-enter-active,
+  .card-swap-leave-active {
+    transition: opacity 120ms ease;
+  }
+  .card-swap-enter-from,
+  .card-swap-leave-to {
+    transform: none;
+  }
+}
+</style>

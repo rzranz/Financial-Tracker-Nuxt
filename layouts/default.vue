@@ -5,10 +5,8 @@ import {
   Home,
   Landmark,
   LogOut,
-  Menu,
   ShieldCheck,
-  UserCog,
-  X
+  UserCog
 } from 'lucide-vue-next'
 import { getUserDisplayName } from '~/utils/profile'
 
@@ -17,7 +15,6 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const { summary, resetState } = useFinVault()
 
-const mobileDrawerOpen = ref(false)
 const isSigningOut = ref(false)
 
 const navItems = computed(() => [
@@ -51,91 +48,62 @@ async function handleSignOut() {
     isSigningOut.value = false
   }
 }
-
-watch(
-  () => route.path,
-  () => {
-    mobileDrawerOpen.value = false
-  }
-)
 </script>
 
 <template>
   <div class="min-h-[100dvh] overflow-x-hidden bg-vault-bg text-slate-100">
-    <!-- Desktop Sidebar -->
-    <aside
-      class="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/[0.07] bg-vault-surface lg:flex"
+    <!-- Unified Top Bar (Brand Left + Profile & Notifications Top-Right) -->
+    <header
+      class="sticky top-0 z-30 border-b border-white/[0.05] bg-vault-bg/85 backdrop-blur-xl"
     >
-      <div class="flex h-16 items-center gap-3 border-b border-white/[0.07] px-5">
-        <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/15 text-violet-300"
-        >
-          <ShieldCheck class="h-5 w-5" />
-        </div>
-        <div>
-          <p class="text-sm font-bold tracking-tight text-white">FinVault</p>
-          <p class="text-[11px] font-medium text-slate-400">Real-Time Ledger Engine</p>
-        </div>
-      </div>
-
-      <nav class="flex-1 space-y-1.5 px-3 py-5" aria-label="Navigasi utama">
+      <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <!-- Brand Emblem -->
         <NuxtLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="group flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
-          :class="
-            route.path === item.to
-              ? 'bg-white text-slate-950 shadow-sm'
-              : 'text-slate-400 hover:bg-vault-card hover:text-slate-100'
-          "
+          to="/"
+          class="group flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-vault-card/80 py-1.5 pl-1.5 pr-3.5 transition hover:border-white/20 active:scale-[0.98]"
         >
-          <span class="flex items-center gap-3">
-            <component :is="item.icon" class="h-4 w-4 shrink-0" />
-            <span>{{ item.label }}</span>
-          </span>
           <span
-            v-if="item.badge && item.badge > 0"
-            class="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 font-mono text-[11px] font-bold"
-            :class="
-              route.path === item.to
-                ? 'bg-slate-950 text-amber-400'
-                : 'bg-amber-500/20 text-amber-300'
-            "
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/20 text-violet-300 transition-transform duration-300 group-hover:scale-105"
           >
-            {{ item.badge }}
+            <ShieldCheck class="h-4 w-4" />
           </span>
+          <span class="text-sm font-bold tracking-tight text-white">FinVault</span>
         </NuxtLink>
-      </nav>
 
-      <div class="border-t border-white/[0.07] p-4">
-        <div class="mb-3 rounded-2xl border border-white/[0.07] bg-vault-card p-3.5">
-          <p class="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
-            Zero-Bias Accounting
-          </p>
-          <p class="mt-1 text-xs leading-relaxed text-slate-400">
-            Kas Likuid dipisahkan ketat dari modal terikat &amp; proyeksi imbal hasil.
-          </p>
-        </div>
+        <!-- Top-Right Profile + Notifications + Sign Out -->
+        <div class="flex items-center gap-2">
+          <NuxtLink
+            to="/notifications"
+            class="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-200 transition hover:border-white/25 hover:text-white active:scale-95"
+            title="Notifications"
+            aria-label="Notifikasi"
+          >
+            <Bell class="h-4 w-4" />
+            <span
+              v-if="summary.unreadNotifications > 0"
+              class="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-vault-card"
+            />
+          </NuxtLink>
 
-        <div class="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-vault-card/70 px-3 py-2.5">
           <NuxtLink
             to="/profile"
-            class="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl transition hover:opacity-90"
+            class="group flex items-center gap-2.5 rounded-full border border-white/10 bg-vault-card py-1 pl-1 pr-3 transition hover:border-violet-400/40 active:scale-[0.98]"
             title="Edit Profile"
+            aria-label="Edit Profile"
           >
             <UserAvatar :user="user" size="sm" />
-            <div class="min-w-0">
-              <p class="truncate text-xs font-semibold text-slate-100 group-hover:text-violet-300">
+            <div class="hidden text-left sm:block">
+              <p class="max-w-[140px] truncate text-xs font-semibold text-white group-hover:text-violet-300">
                 {{ displayName }}
               </p>
-              <p class="truncate text-[11px] text-slate-500">Edit Profile</p>
+              <p class="text-[10px] text-slate-400">Edit Profile</p>
             </div>
           </NuxtLink>
+
           <button
             type="button"
             :disabled="isSigningOut"
-            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-rose-400 active:scale-95 disabled:opacity-50"
+            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300 active:scale-95 disabled:opacity-50"
             title="Keluar"
             aria-label="Keluar dari akun"
             @click="handleSignOut"
@@ -144,101 +112,73 @@ watch(
           </button>
         </div>
       </div>
-    </aside>
-
-    <!-- Pinterest-Style Minimal Mobile Header -->
-    <header
-      class="sticky top-0 z-30 flex items-center justify-between bg-vault-bg/85 px-4 pb-2 pt-3 backdrop-blur-xl lg:hidden"
-    >
-      <button
-        type="button"
-        class="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-200 transition hover:border-white/20 active:scale-95"
-        aria-label="Menu akun"
-        @click="mobileDrawerOpen = !mobileDrawerOpen"
-      >
-        <X v-if="mobileDrawerOpen" class="h-4 w-4" />
-        <Menu v-else class="h-4 w-4" />
-      </button>
-
-      <div class="flex items-center gap-2">
-        <NuxtLink
-          to="/notifications"
-          class="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-200 transition hover:border-white/20 active:scale-95"
-          aria-label="Notifikasi"
-        >
-          <Bell class="h-4 w-4" />
-          <span
-            v-if="summary.unreadNotifications > 0"
-            class="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-vault-card"
-          />
-        </NuxtLink>
-
-        <NuxtLink
-          to="/profile"
-          class="transition active:scale-95"
-          title="Edit Profile"
-          aria-label="Edit Profile"
-        >
-          <UserAvatar :user="user" size="md" />
-        </NuxtLink>
-      </div>
     </header>
 
-    <!-- Mobile Quick Account Sheet -->
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="-translate-y-2 opacity-0"
-      enter-to-class="translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="translate-y-0 opacity-100"
-      leave-to-class="-translate-y-2 opacity-0"
+    <!-- Desktop Floating Circular Rail (No wide sidebar — circular pills + hover page name!) -->
+    <nav
+      aria-label="Navigasi desktop"
+      class="fixed left-5 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-full border border-white/10 bg-[#12141C]/90 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.75)] backdrop-blur-xl lg:flex"
     >
-      <div
-        v-if="mobileDrawerOpen"
-        class="fixed inset-x-4 top-16 z-40 space-y-3 rounded-3xl border border-white/10 bg-vault-surface/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden"
+      <NuxtLink
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to"
+        class="group relative flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95"
+        :class="
+          route.path === item.to
+            ? 'bg-white text-slate-950 shadow-md'
+            : 'text-slate-400 hover:bg-white/10 hover:text-white'
+        "
+        :aria-label="item.label"
       >
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-3">
-            <UserAvatar :user="user" size="md" />
-            <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-white">
-                {{ displayName }}
-              </p>
-              <p class="truncate text-[11px] text-slate-400">
-                {{ user?.email || 'FinVault User' }}
-              </p>
-            </div>
-          </div>
+        <component :is="item.icon" class="h-4 w-4 shrink-0" />
 
-          <button
-            type="button"
-            :disabled="isSigningOut"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-300 transition active:scale-95"
-            @click="handleSignOut"
-          >
-            <LogOut class="h-3.5 w-3.5" />
-            Keluar
-          </button>
-        </div>
-
-        <NuxtLink
-          to="/profile"
-          class="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-vault-card px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-white/25 active:scale-[0.98]"
+        <span
+          v-if="item.badge && item.badge > 0"
+          class="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-400 px-1 font-mono text-[10px] font-bold text-slate-950"
         >
-          <UserCog class="h-4 w-4 text-violet-300" />
-          Edit Profile &amp; Keamanan
-        </NuxtLink>
-      </div>
-    </Transition>
+          {{ item.badge }}
+        </span>
+
+        <!-- Hover Tooltip revealing page name -->
+        <span
+          class="pointer-events-none absolute left-14 whitespace-nowrap rounded-full border border-white/10 bg-[#181B26] px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0 group-hover:opacity-100"
+          style="transform: translateX(-6px);"
+        >
+          {{ item.label }}
+        </span>
+      </NuxtLink>
+
+      <div class="my-0.5 h-px w-6 bg-white/10" aria-hidden="true" />
+
+      <NuxtLink
+        to="/profile"
+        class="group relative flex h-11 w-11 items-center justify-center rounded-full transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-95"
+        :class="
+          route.path === '/profile'
+            ? 'bg-white text-slate-950 shadow-md'
+            : 'text-slate-400 hover:bg-white/10 hover:text-white'
+        "
+        aria-label="Profile"
+      >
+        <UserCog class="h-4 w-4 shrink-0" />
+        <span
+          class="pointer-events-none absolute left-14 whitespace-nowrap rounded-full border border-white/10 bg-[#181B26] px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0 group-hover:opacity-100"
+          style="transform: translateX(-6px);"
+        >
+          Edit Profile
+        </span>
+      </NuxtLink>
+    </nav>
 
     <!-- Main Content -->
-    <main class="pb-28 lg:pb-10 lg:pl-64">
-      <div class="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
+    <main class="pb-28 lg:pb-12 lg:pl-20">
+      <div class="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         <slot />
       </div>
     </main>
 
-    <!-- Pinterest-Style Floating Pill Bottom Dock (Mobile & Tablet) -->
+    <!-- Mobile & Tablet Floating Pill Bottom Dock -->
     <nav
       aria-label="Navigasi mobile"
       class="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/10 bg-[#13151E]/95 p-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl lg:hidden"

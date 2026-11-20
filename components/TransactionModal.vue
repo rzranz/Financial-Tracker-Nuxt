@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { WALLET_CARDS, type WalletCardId, formatNoteWithWallet } from '~/utils/cards'
 import { extractApiErrorMessage } from '~/utils/errors'
 import { formatIDR, todayUTC } from '~/utils/finance'
 
@@ -6,9 +7,11 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     initialType?: 'income' | 'expense'
+    initialWallet?: WalletCardId
   }>(),
   {
-    initialType: 'income'
+    initialType: 'income',
+    initialWallet: 'all'
   }
 )
 
@@ -19,6 +22,7 @@ const emit = defineEmits<{
 const { createTransaction } = useFinVault()
 
 const type = ref<'income' | 'expense'>(props.initialType)
+const walletId = ref<WalletCardId>(props.initialWallet)
 const category = ref(props.initialType === 'income' ? 'Gaji' : 'Makan & Minum')
 const amount = ref('')
 const note = ref('')
@@ -54,6 +58,7 @@ watch(
   (isOpen: boolean) => {
     if (isOpen) {
       type.value = props.initialType
+      walletId.value = props.initialWallet
       category.value = props.initialType === 'income' ? incomeCategories[0] : expenseCategories[0]
       errorMessage.value = ''
     }
@@ -79,7 +84,7 @@ async function handleSubmit() {
       type: type.value,
       category: category.value,
       amount: cleanedAmount,
-      note: note.value.trim() || null,
+      note: formatNoteWithWallet(note.value, walletId.value),
       transaction_date: transactionDate.value
     })
     amount.value = ''
@@ -103,6 +108,27 @@ async function handleSubmit() {
     <form class="space-y-4" @submit.prevent="handleSubmit">
       <!-- Sliding / Morphing Type Switcher -->
       <SegmentedTabs v-model="type" :items="typeTabs" full-width />
+
+      <!-- Card / Wallet Source Selector -->
+      <div class="space-y-1.5">
+        <span class="block text-xs font-medium text-slate-300">Kartu / Sumber Dana</span>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            v-for="card in WALLET_CARDS"
+            :key="card.id"
+            type="button"
+            class="rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 active:scale-95"
+            :class="
+              walletId === card.id
+                ? 'border-violet-400/50 bg-violet-500/20 text-violet-200'
+                : 'border-vault-border bg-vault-card text-slate-400 hover:border-white/20 hover:text-slate-200'
+            "
+            @click="walletId = card.id"
+          >
+            {{ card.id === 'all' ? 'Umum' : card.shortLabel }}
+          </button>
+        </div>
+      </div>
 
       <!-- Amount -->
       <div class="space-y-1.5">

@@ -11,6 +11,7 @@ import {
   TrendingUp
 } from 'lucide-vue-next'
 import type { InvestmentRecord } from '~/types/database'
+import type { WalletCardId } from '~/utils/cards'
 import { daysUntilMaturity, formatDateID, formatIDR } from '~/utils/finance'
 import { getInvestmentStatusPresentation, getTransactionPresentation } from '~/utils/presenters'
 import { getUserDisplayName } from '~/utils/profile'
@@ -29,6 +30,7 @@ const {
 
 const showTxModal = ref(false)
 const txModalType = ref<'income' | 'expense'>('income')
+const txModalWallet = ref<WalletCardId>('all')
 const showInvModal = ref(false)
 const claimingContract = ref<InvestmentRecord | null>(null)
 const syncing = ref(false)
@@ -51,8 +53,9 @@ const activeAndMatured = computed(() =>
 
 const recentTransactions = computed(() => transactions.value.slice(0, 6))
 
-function openTransactionModal(initialType: 'income' | 'expense') {
+function openTransactionModal(initialType: 'income' | 'expense', wallet: WalletCardId = 'all') {
   txModalType.value = initialType
+  txModalWallet.value = wallet
   showTxModal.value = true
 }
 
@@ -161,8 +164,9 @@ async function handleSyncMaturity() {
     <!-- Stacked Card Deck + Balance Metrics -->
     <BalanceHeroCard
       :summary="summary"
+      :transactions="transactions"
       :loading="loading && !initialized"
-      @add-cash="openTransactionModal('income')"
+      @add-cash="(wallet) => openTransactionModal('income', wallet)"
       @open-investments="navigateTo('/investments')"
     />
 
@@ -420,6 +424,7 @@ async function handleSyncMaturity() {
     <TransactionModal
       :open="showTxModal"
       :initial-type="txModalType"
+      :initial-wallet="txModalWallet"
       @close="showTxModal = false"
     />
     <InvestmentModal :open="showInvModal" @close="showInvModal = false" />
