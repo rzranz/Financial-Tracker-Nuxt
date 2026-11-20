@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
-  TrendingUp
+  TrendingUp,
+  X
 } from 'lucide-vue-next'
 import type { FinancialSummary, TransactionRecord } from '~/types/database'
 import {
@@ -64,14 +65,32 @@ const activeMetrics = computed(() =>
   computeCardMetrics(props.selectedCard, props.transactions, props.summary, allCards.value)
 )
 
-function toggleStack() {
-  isStackExpanded.value = !isStackExpanded.value
+function openStack() {
+  isStackExpanded.value = true
+}
+
+function closeStack() {
+  isStackExpanded.value = false
 }
 
 function selectCardFromStack(cardId: WalletCardId) {
   emit('update:selectedCard', cardId)
   isStackExpanded.value = false
 }
+
+function handleEscapeKey(event: KeyboardEvent) {
+  if (event.key === 'Escape' && isStackExpanded.value && !showAddCardModal.value) {
+    closeStack()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscapeKey)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleEscapeKey)
+})
 
 async function handleRemoveCustomCard(cardId: string) {
   if (deletingCardId.value) return
@@ -122,7 +141,7 @@ const allocation = computed(() => {
 <template>
   <section class="space-y-4">
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-      <!-- Pure Interactive Stacked Card Deck (Click to Fan Out All Cards, Click Any Card to Collapse) -->
+      <!-- Stacked Wallet Card Deck -->
       <div class="xl:col-span-5">
         <div class="relative pt-1">
           <!-- Peeking Amber Gold Back Card (Locked Principal P_l) -->
@@ -144,260 +163,142 @@ const allocation = computed(() => {
             </span>
           </button>
 
-          <!-- Collapsed Stack View vs Expanded Fan-Out List -->
-          <Transition name="stack-morph" mode="out-in">
-            <!-- COLLAPSED STACKED CARD VIEW -->
+          <!-- Collapsed Stack View -->
+          <div
+            class="relative z-10 cursor-pointer"
+            role="button"
+            tabindex="0"
+            aria-label="Buka tumpukan kartu untuk memilih rekening atau e-wallet"
+            @click="openStack"
+            @keydown.enter.prevent="openStack"
+            @keydown.space.prevent="openStack"
+          >
+            <!-- Subtle Stacked Card Layers Peeking Above Active Card -->
             <div
-              v-if="!isStackExpanded"
-              key="collapsed"
-              class="relative z-10 cursor-pointer"
-              role="button"
-              tabindex="0"
-              aria-label="Buka tumpukan kartu untuk memilih rekening atau e-wallet"
-              @click="toggleStack"
-              @keydown.enter.prevent="toggleStack"
-              @keydown.space.prevent="toggleStack"
+              v-for="(peek, idx) in peekingCards"
+              :key="peek.id"
+              aria-hidden="true"
+              class="relative -mb-4 h-7 rounded-t-[22px] border-t border-white/20 bg-gradient-to-r px-5 pt-1.5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              :class="[
+                peek.gradientClass,
+                idx === 0 ? 'mx-3 opacity-80' : 'mx-1.5 opacity-95'
+              ]"
             >
-              <!-- Subtle Stacked Card Layers Peeking Above Active Card -->
-              <div
-                v-for="(peek, idx) in peekingCards"
-                :key="peek.id"
-                aria-hidden="true"
-                class="relative -mb-4 h-7 rounded-t-[22px] border-t border-white/20 bg-gradient-to-r px-5 pt-1.5 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
-                :class="[
-                  peek.gradientClass,
-                  idx === 0 ? 'mx-3 opacity-80' : 'mx-1.5 opacity-95'
-                ]"
-              >
-                <span class="block text-[9px] font-bold uppercase tracking-widest text-white/75">
-                  {{ peek.name }}
-                </span>
-              </div>
-
-              <!-- Active Front Card with Concave Cutout Notch -->
-              <div
-                class="group relative overflow-hidden rounded-[26px] bg-gradient-to-br p-5 pb-6 text-white transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 sm:p-6 sm:pb-7"
-                :class="activeCard.gradientClass"
-                :style="{ boxShadow: `0 24px 50px -20px ${activeCard.shadowColor}` }"
-                @mousemove="handlePointerMove"
-                @mouseleave="handlePointerLeave"
-              >
-                <!-- Pointer Spotlight -->
-                <div
-                  aria-hidden="true"
-                  class="pointer-events-none absolute inset-0 transition-opacity duration-500"
-                  :class="spotlight.active ? 'opacity-100' : 'opacity-0'"
-                  :style="{
-                    background: `radial-gradient(280px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255, 255, 255, 0.2), transparent 70%)`
-                  }"
-                />
-
-                <!-- Card Top Row -->
-                <div class="relative z-10 flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
-                      <ShieldCheck v-if="activeCard.id === 'all'" class="h-4 w-4 text-white" />
-                      <CreditCard v-else class="h-4 w-4 text-white" />
-                    </span>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-white/95">
-                      {{ activeCard.name }}
-                    </span>
-                  </div>
-
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm transition group-hover:bg-black/40"
-                  >
-                    <Layers class="h-3 w-3" />
-                    Ganti Kartu
-                    <ChevronDown class="h-3 w-3 transition-transform duration-300 group-hover:translate-y-0.5" />
-                  </span>
-                </div>
-
-                <!-- Balance Display -->
-                <div class="relative z-10 mt-5">
-                  <p class="text-xs font-medium text-white/75">{{ activeCard.subtitle }}</p>
-                  <div
-                    v-if="loading"
-                    class="mt-1.5 h-9 w-48 animate-pulse rounded-xl bg-white/20"
-                  />
-                  <p
-                    v-else
-                    class="mt-1 break-words font-mono text-3xl font-extrabold tracking-tight text-white tabular-nums sm:text-4xl"
-                  >
-                    {{ formatIDR(activeMetrics.balance) }}
-                  </p>
-                </div>
-
-                <!-- Card Bottom Left Info (Leaves clean room for bottom-right cutout notch) -->
-                <div class="relative z-10 mt-6 pr-36 sm:pr-40">
-                  <template v-if="activeCard.id === 'all'">
-                    <p class="text-[11px] text-white/70">Projected Net Worth</p>
-                    <p class="mt-0.5 truncate font-mono text-sm font-bold text-white tabular-nums">
-                      {{ formatIDR(summary.projectedNetWorth) }}
-                    </p>
-                  </template>
-                  <template v-else>
-                    <p class="text-[11px] text-white/80">
-                      {{ activeMetrics.txCount }} mutasi · Keluar
-                      <span class="font-mono font-semibold text-white">{{ formatIDR(activeMetrics.outflow) }}</span>
-                    </p>
-                    <p class="mt-0.5 truncate font-mono text-xs font-semibold text-white/95 tabular-nums">
-                      Masuk: +{{ formatIDR(activeMetrics.inflow) }}
-                    </p>
-                  </template>
-                </div>
-
-                <!-- Bottom-Right Concave Cutout Notch ("Out-Shape-From-Shape") -->
-                <div
-                  class="absolute bottom-0 right-0 z-20 rounded-tl-[26px] bg-vault-bg pl-2.5 pt-2.5"
-                  @click.stop
-                >
-                  <svg
-                    aria-hidden="true"
-                    class="pointer-events-none absolute -left-5 bottom-0 h-5 w-5 text-vault-bg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
-                  </svg>
-                  <svg
-                    aria-hidden="true"
-                    class="pointer-events-none absolute -top-5 right-0 h-5 w-5 text-vault-bg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
-                  </svg>
-
-                  <button
-                    type="button"
-                    class="group/btn inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#151722] py-1.5 pl-2 pr-4 text-xs font-bold text-white shadow-lg transition-all duration-200 hover:border-white/30 hover:bg-[#1E2130] active:scale-[0.96]"
-                    @click.stop="emit('add-cash', activeCard.id)"
-                  >
-                    <span
-                      class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:rotate-90 group-hover/btn:scale-105"
-                    >
-                      <Plus class="h-4 w-4" />
-                    </span>
-                    <span>{{ activeCard.id === 'all' ? 'Catat Kas' : activeCard.shortLabel }}</span>
-                  </button>
-                </div>
-              </div>
+              <span class="block text-[9px] font-bold uppercase tracking-widest text-white/75">
+                {{ peek.name }}
+              </span>
             </div>
 
-            <!-- EXPANDED FANNED-OUT CARD STACK ("Keluar Berjajar") -->
+            <!-- Active Front Card with Concave Cutout Notch -->
             <div
-              v-else
-              key="expanded"
-              class="relative z-10 space-y-2.5 rounded-[26px] border border-white/10 bg-[#0D0F15] p-3 shadow-2xl"
+              class="group relative overflow-hidden rounded-[26px] bg-gradient-to-br p-5 pb-6 text-white transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 sm:p-6 sm:pb-7"
+              :class="activeCard.gradientClass"
+              :style="{ boxShadow: `0 24px 50px -20px ${activeCard.shadowColor}` }"
+              @mousemove="handlePointerMove"
+              @mouseleave="handlePointerLeave"
             >
-              <div class="flex items-center justify-between px-1.5 pt-0.5">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                  Pilih Kartu / Sumber Dana
-                </span>
-                <button
-                  type="button"
-                  class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-95"
-                  @click="isStackExpanded = false"
-                >
-                  Tutup
-                </button>
-              </div>
+              <!-- Pointer Spotlight -->
+              <div
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-0 transition-opacity duration-500"
+                :class="spotlight.active ? 'opacity-100' : 'opacity-0'"
+                :style="{
+                  background: `radial-gradient(280px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255, 255, 255, 0.2), transparent 70%)`
+                }"
+              />
 
-              <button
-                v-for="(row, index) in allCardRows"
-                :key="row.card.id"
-                type="button"
-                class="stack-item-emerge group flex w-full items-center justify-between gap-3 rounded-2xl border bg-gradient-to-r p-4 text-left text-white transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-0.5 active:scale-[0.98]"
-                :class="[
-                  row.card.gradientClass,
-                  selectedCard === row.card.id
-                    ? 'border-white/60 ring-2 ring-white/25'
-                    : 'border-white/15 opacity-90 hover:opacity-100'
-                ]"
-                :style="{ animationDelay: `${index * 45}ms` }"
-                @click="selectCardFromStack(row.card.id)"
-              >
-                <div class="flex min-w-0 items-center gap-3">
-                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
-                    <ShieldCheck v-if="row.card.id === 'all'" class="h-4 w-4 text-white" />
+              <!-- Card Top Row -->
+              <div class="relative z-10 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
+                    <ShieldCheck v-if="activeCard.id === 'all'" class="h-4 w-4 text-white" />
                     <CreditCard v-else class="h-4 w-4 text-white" />
                   </span>
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                      <p class="truncate text-sm font-bold text-white">{{ row.card.name }}</p>
-                      <span
-                        v-if="selectedCard === row.card.id"
-                        class="inline-flex items-center gap-0.5 rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-slate-950"
-                      >
-                        <Check class="h-2.5 w-2.5" />
-                        Aktif
-                      </span>
-                    </div>
-                    <p class="mt-0.5 truncate text-[11px] text-white/75">
-                      {{ row.card.id === 'all' ? 'Total semua rekening' : `${row.metrics.txCount} mutasi · ${row.card.maskedNumber.slice(-4)}` }}
-                    </p>
-                  </div>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-white/95">
+                    {{ activeCard.name }}
+                  </span>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-2 text-right">
-                  <div>
-                    <p class="font-mono text-sm font-extrabold text-white tabular-nums">
-                      {{ formatIDR(row.metrics.balance) }}
-                    </p>
-                    <p
-                      v-if="row.card.id !== 'all'"
-                      class="mt-0.5 font-mono text-[10px] text-white/75 tabular-nums"
-                    >
-                      Keluar {{ formatIDR(row.metrics.outflow) }}
-                    </p>
-                  </div>
-                  <button
-                    v-if="row.card.isCustom"
-                    type="button"
-                    :disabled="deletingCardId === row.card.id"
-                    class="rounded-full bg-black/25 p-1.5 text-white/80 transition hover:bg-rose-500/80 hover:text-white active:scale-90 disabled:opacity-40"
-                    title="Hapus kartu kustom"
-                    aria-label="Hapus kartu kustom"
-                    @click.stop="handleRemoveCustomCard(row.card.id)"
-                  >
-                    <Trash2 class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </button>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm transition group-hover:bg-black/40"
+                >
+                  <Layers class="h-3 w-3" />
+                  Ganti Kartu
+                  <ChevronDown class="h-3 w-3 transition-transform duration-300 group-hover:translate-y-0.5" />
+                </span>
+              </div>
 
-              <!-- Dedicated "+ Add New Card" Card inside Fanned-Out Stack -->
-              <button
-                type="button"
-                class="stack-item-emerge group flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-white/20 bg-vault-card/70 p-4 text-left transition-all duration-200 hover:border-violet-400/50 hover:bg-vault-card active:scale-[0.98]"
-                :style="{ animationDelay: `${allCardRows.length * 45}ms` }"
-                @click="showAddCardModal = true"
+              <!-- Balance Display -->
+              <div class="relative z-10 mt-5">
+                <p class="text-xs font-medium text-white/75">{{ activeCard.subtitle }}</p>
+                <div
+                  v-if="loading"
+                  class="mt-1.5 h-9 w-48 animate-pulse rounded-xl bg-white/20"
+                />
+                <p
+                  v-else
+                  class="mt-1 break-words font-mono text-3xl font-extrabold tracking-tight text-white tabular-nums sm:text-4xl"
+                >
+                  {{ formatIDR(activeMetrics.balance) }}
+                </p>
+              </div>
+
+              <!-- Card Bottom Left Info -->
+              <div class="relative z-10 mt-6 pr-36 sm:pr-40">
+                <template v-if="activeCard.id === 'all'">
+                  <p class="text-[11px] text-white/70">Projected Net Worth</p>
+                  <p class="mt-0.5 truncate font-mono text-sm font-bold text-white tabular-nums">
+                    {{ formatIDR(summary.projectedNetWorth) }}
+                  </p>
+                </template>
+                <template v-else>
+                  <p class="text-[11px] text-white/80">
+                    {{ activeMetrics.txCount }} mutasi · Keluar
+                    <span class="font-mono font-semibold text-white">{{ formatIDR(activeMetrics.outflow) }}</span>
+                  </p>
+                  <p class="mt-0.5 truncate font-mono text-xs font-semibold text-white/95 tabular-nums">
+                    Masuk: +{{ formatIDR(activeMetrics.inflow) }}
+                  </p>
+                </template>
+              </div>
+
+              <!-- Bottom-Right Concave Cutout Notch -->
+              <div
+                class="absolute bottom-0 right-0 z-20 rounded-tl-[26px] bg-vault-bg pl-2.5 pt-2.5"
+                @click.stop
               >
-                <div class="flex items-center gap-3">
+                <svg
+                  aria-hidden="true"
+                  class="pointer-events-none absolute -left-5 bottom-0 h-5 w-5 text-vault-bg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
+                </svg>
+                <svg
+                  aria-hidden="true"
+                  class="pointer-events-none absolute -top-5 right-0 h-5 w-5 text-vault-bg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M20 20H0C11.0457 20 20 11.0457 20 0V20Z" />
+                </svg>
+
+                <button
+                  type="button"
+                  class="group/btn inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#151722] py-1.5 pl-2 pr-4 text-xs font-bold text-white shadow-lg transition-all duration-200 hover:border-white/30 hover:bg-[#1E2130] active:scale-[0.96]"
+                  @click.stop="emit('add-cash', activeCard.id)"
+                >
                   <span
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-105"
+                    class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-950 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:rotate-90 group-hover/btn:scale-105"
                   >
                     <Plus class="h-4 w-4" />
                   </span>
-                  <div>
-                    <p class="text-sm font-bold text-white">Tambah Kartu / Rekening Baru</p>
-                    <p class="text-[11px] text-slate-400">
-                      Buat kartu bank atau e-wallet kustom Anda sendiri
-                    </p>
-                  </div>
-                </div>
-                <span class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">
-                  + Baru
-                </span>
-              </button>
+                  <span>{{ activeCard.id === 'all' ? 'Catat Kas' : activeCard.shortLabel }}</span>
+                </button>
+              </div>
             </div>
-          </Transition>
-
-          <AddCardModal
-            :open="showAddCardModal"
-            @close="showAddCardModal = false"
-            @created="(card) => selectCardFromStack(card.id)"
-          />
+          </div>
 
           <!-- Optional expandable detail drawer when clicking peeking Amber card -->
           <Transition
@@ -560,35 +461,198 @@ const allocation = computed(() => {
         />
       </div>
     </div>
+
+    <!-- FULL-PAGE ON MOBILE / FULL-CARD GALLERY ON DESKTOP -->
+    <Teleport to="body">
+      <Transition name="wallet-sheet">
+        <div
+          v-if="isStackExpanded"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pilih kartu atau rekening"
+          class="fixed inset-0 z-50 overflow-y-auto bg-vault-bg/98 backdrop-blur-xl md:bg-black/85 md:p-6"
+          @click.self="closeStack"
+        >
+          <div class="mx-auto flex min-h-full w-full max-w-4xl flex-col md:justify-center">
+            <!-- Sticky Mobile / Gallery Header -->
+            <div
+              class="sticky top-0 z-20 flex items-center justify-between border-b border-white/[0.07] bg-vault-bg/95 px-4 py-4 backdrop-blur-xl md:rounded-t-[28px] md:border md:border-b-0 md:bg-vault-surface/95 md:px-6 md:py-5"
+            >
+              <div>
+                <h2 class="text-base font-extrabold tracking-tight text-white sm:text-lg">
+                  Dompet &amp; Kartu Rekening
+                </h2>
+                <p class="text-xs text-slate-400">
+                  Tap salah satu kartu untuk mengaktifkan dan melihat mutasinya
+                </p>
+              </div>
+              <button
+                type="button"
+                class="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-vault-card text-slate-300 transition hover:rotate-90 hover:border-white/25 hover:text-white active:scale-95"
+                aria-label="Tutup daftar kartu"
+                @click="closeStack"
+              >
+                <X class="h-4 w-4" />
+              </button>
+            </div>
+
+            <!-- Full-Shape Physical Cards Grid / Stack -->
+            <div
+              class="flex-1 space-y-4 px-4 pb-10 pt-5 md:flex-none md:rounded-b-[28px] md:border md:border-t-0 md:border-white/[0.07] md:bg-vault-surface/95 md:px-6 md:pb-6"
+            >
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <!-- Full-Proportioned Bank Cards -->
+                <div
+                  v-for="(row, index) in allCardRows"
+                  :key="row.card.id"
+                  role="button"
+                  tabindex="0"
+                  class="stack-item-emerge group relative flex min-h-[184px] cursor-pointer flex-col justify-between overflow-hidden rounded-[26px] border bg-gradient-to-br p-5 text-white transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 active:scale-[0.98]"
+                  :class="[
+                    row.card.gradientClass,
+                    selectedCard === row.card.id
+                      ? 'border-white/70 ring-2 ring-white/30'
+                      : 'border-white/15 hover:border-white/35'
+                  ]"
+                  :style="{
+                    animationDelay: `${index * 45}ms`,
+                    boxShadow: `0 20px 40px -20px ${row.card.shadowColor}`
+                  }"
+                  @click="selectCardFromStack(row.card.id)"
+                  @keydown.enter.prevent="selectCardFromStack(row.card.id)"
+                  @keydown.space.prevent="selectCardFromStack(row.card.id)"
+                >
+                  <!-- Metallic sheen -->
+                  <div
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  />
+
+                  <!-- Card Top -->
+                  <div class="relative z-10 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
+                        <ShieldCheck v-if="row.card.id === 'all'" class="h-4 w-4 text-white" />
+                        <CreditCard v-else class="h-4 w-4 text-white" />
+                      </span>
+                      <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-white">
+                          {{ row.card.name }}
+                        </p>
+                        <p class="font-mono text-[10px] text-white/75">
+                          {{ row.card.maskedNumber }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                      <span
+                        v-if="selectedCard === row.card.id"
+                        class="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold text-slate-950 shadow"
+                      >
+                        <Check class="h-3 w-3" />
+                        Aktif
+                      </span>
+                      <button
+                        v-if="row.card.isCustom"
+                        type="button"
+                        :disabled="deletingCardId === row.card.id"
+                        class="rounded-full bg-black/30 p-1.5 text-white/80 transition hover:bg-rose-500 hover:text-white active:scale-90 disabled:opacity-40"
+                        title="Hapus kartu kustom"
+                        aria-label="Hapus kartu kustom"
+                        @click.stop="handleRemoveCustomCard(row.card.id)"
+                      >
+                        <Trash2 class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Card Center Balance -->
+                  <div class="relative z-10 my-3">
+                    <p class="text-[11px] font-medium text-white/75">{{ row.card.subtitle }}</p>
+                    <p class="mt-0.5 break-words font-mono text-2xl font-extrabold tracking-tight text-white tabular-nums">
+                      {{ formatIDR(row.metrics.balance) }}
+                    </p>
+                  </div>
+
+                  <!-- Card Bottom Metadata -->
+                  <div class="relative z-10 flex items-center justify-between border-t border-white/15 pt-2.5 text-[11px]">
+                    <span class="text-white/80">
+                      {{ row.card.id === 'all' ? `${row.metrics.txCount} total mutasi` : `${row.metrics.txCount} mutasi` }}
+                    </span>
+                    <span class="font-mono font-semibold text-white/95 tabular-nums">
+                      Keluar {{ formatIDR(row.metrics.outflow) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Full-Shape "+ Tambah Kartu Baru" Card -->
+                <button
+                  type="button"
+                  class="stack-item-emerge group relative flex min-h-[184px] w-full flex-col justify-between rounded-[26px] border border-dashed border-white/20 bg-vault-card/60 p-5 text-left transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:border-violet-400/60 hover:bg-vault-card active:scale-[0.98]"
+                  :style="{ animationDelay: `${allCardRows.length * 45}ms` }"
+                  @click="showAddCardModal = true"
+                >
+                  <div class="flex w-full items-center justify-between">
+                    <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                      Rekening Baru
+                    </span>
+                    <span
+                      class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-950 shadow-lg transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:rotate-90 group-hover:scale-110"
+                    >
+                      <Plus class="h-5 w-5" />
+                    </span>
+                  </div>
+
+                  <div>
+                    <p class="text-lg font-bold text-white">Tambah Kartu / E-Wallet</p>
+                    <p class="mt-1 text-xs leading-relaxed text-slate-400">
+                      Buat kartu baru seperti BRI, SeaBank, Bank Jago, GoPay, atau rekening tabungan lainnya.
+                    </p>
+                  </div>
+
+                  <div class="flex items-center justify-between border-t border-white/10 pt-2.5 text-[11px] font-semibold text-violet-300">
+                    <span>Tersimpan di akun Anda</span>
+                    <span>+ Buat Kartu</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <AddCardModal
+      :open="showAddCardModal"
+      @close="showAddCardModal = false"
+      @created="(card) => selectCardFromStack(card.id)"
+    />
   </section>
 </template>
 
 <style scoped>
-.stack-morph-enter-active,
-.stack-morph-leave-active {
+.wallet-sheet-enter-active,
+.wallet-sheet-leave-active {
   transition:
-    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 200ms cubic-bezier(0.32, 0.72, 0, 1);
+    opacity 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.stack-morph-enter-from {
+.wallet-sheet-enter-from,
+.wallet-sheet-leave-to {
   opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.97);
-}
-
-.stack-morph-leave-to {
-  opacity: 0;
-  transform: translate3d(0, -10px, 0) scale(0.97);
+  transform: translateY(18px) scale(0.98);
 }
 
 .stack-item-emerge {
-  animation: stack-card-fan 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation: stack-card-fan 340ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
 @keyframes stack-card-fan {
   0% {
     opacity: 0;
-    transform: translate3d(0, -14px, 0) scale(0.95);
+    transform: translate3d(0, 16px, 0) scale(0.96);
   }
   100% {
     opacity: 1;
@@ -597,8 +661,8 @@ const allocation = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stack-morph-enter-active,
-  .stack-morph-leave-active,
+  .wallet-sheet-enter-active,
+  .wallet-sheet-leave-active,
   .stack-item-emerge {
     animation: none;
     transition: opacity 120ms ease;
